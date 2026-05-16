@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprint Analytics — Miles Core Platform</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f4f5f7;color:#172b4d;font-size:13px;line-height:1.5}
+.page{width:100%;padding:16px}
+.header{background:#fff;border-radius:8px;border:1px solid #dfe1e6;padding:14px 16px;margin-bottom:12px}
+.header h1{font-size:17px;font-weight:600;color:#172b4d;margin-bottom:2px}
+.header p{font-size:11px;color:#6b778c}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.kpi{background:#fff;border:1px solid #dfe1e6;border-radius:8px;padding:10px 14px}
+.kl{font-size:10px;color:#6b778c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.kv{font-size:22px;font-weight:700;line-height:1}
+.ks{font-size:10px;color:#97a0af;margin-top:2px}
+.card{background:#fff;border:1px solid #dfe1e6;border-radius:8px;padding:12px 14px;margin-bottom:10px}
+.ct{font-size:12px;font-weight:600;color:#172b4d;margin-bottom:2px}
+.cs{font-size:10.5px;color:#6b778c;margin-bottom:8px}
+.leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:7px;font-size:10.5px;color:#6b778c}
+.ld{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px;vertical-align:middle}
+/* Heatmap */
+.ht-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ht{border-collapse:collapse;font-size:11px;white-space:nowrap}
+.ht th{padding:4px 7px;text-align:center;background:#f4f5f7;font-weight:500;color:#6b778c;border:0.5px solid #dfe1e6;font-size:10.5px}
+.ht th.nm{text-align:left;min-width:85px}
+.ht td{padding:4px 7px;text-align:center;border:0.5px solid #dfe1e6;font-weight:500}
+.ht td.nm{text-align:left;background:#f9f9f9;font-weight:600;color:#172b4d;white-space:nowrap}
+.g{background:#EAF3DE;color:#2d6a14}.lg{background:#C0DD97;color:#2d6a14}
+.y{background:#FAEEDA;color:#7a4611}.r{background:#FCEBEB;color:#9e2424}
+.ot{background:#FAEEDA;color:#633806;font-weight:700}
+.abs{background:#f5f5f5;color:#bbb;font-style:italic;font-size:9px}
+.na{background:#fafafa;color:#ccc;font-size:9px;font-style:italic}
+.a9{background:#EF9F27;color:#412402;font-weight:700}
+.full-abs{background:#A32D2D;color:#fff;font-weight:700}
+.xz{background:#fafafa;color:#aaa}
+/* Signals */
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sig{border-radius:6px;padding:9px 12px;font-size:11px;line-height:1.45;border-left:3px solid transparent}
+.sig strong{display:block;font-size:11px;font-weight:600;margin-bottom:1px}
+.sig-g{background:#EAF3DE;border-color:#639922;color:#1a3b09}
+.sig-a{background:#FAEEDA;border-color:#BA7517;color:#3b1f05}
+.sig-r{background:#FCEBEB;border-color:#E24B4A;color:#3b0c0c}
+.sig-b{background:#E6F1FB;border-color:#185FA5;color:#042c53}
+.sh{font-size:10px;font-weight:600;color:#6b778c;text-transform:uppercase;letter-spacing:.07em;margin:12px 0 7px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header">
+  <h1>Miles Core Platform — Sprint Analytics</h1>
+  <p>Dec 2025 – May 2026 · 11 sprints · Jira + Tempo (7,927 entries) · Updated May 15, 2026 · <a href="https://glamela.github.io/sofico-analytics/sprint-analytics-dashboard.html" style="color:#185FA5">Full screen ↗</a></p>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="kl">Avg completion</div><div class="kv" style="color:#639922">60%</div><div class="ks">↑ 13% → 75% trend</div></div>
+  <div class="kpi"><div class="kl">Peak PROD hrs</div><div class="kv" style="color:#185FA5">204h</div><div class="ks">Jan 12 — benchmark sprint</div></div>
+  <div class="kpi"><div class="kl">Avg mid-sprint adds</div><div class="kv" style="color:#BA7517">5.1</div><div class="ks">per sprint — growing</div></div>
+  <div class="kpi"><div class="kl">Total carry-overs</div><div class="kv" style="color:#E24B4A">76</div><div class="ks">across 11 sprints</div></div>
+</div>
+
+<!-- 1 Velocity -->
+<div class="card">
+  <div class="ct">1 · Sprint velocity — completion rate</div>
+  <div class="cs">% of all in-sprint scope closed by sprint end · Green ≥65% · Amber 40–64% · Red &lt;40%</div>
+  <div style="position:relative;height:240px"><canvas id="c1"></canvas></div>
+</div>
+
+<!-- 2 Scope -->
+<div class="card">
+  <div class="ct">2 · Scope changes per sprint</div>
+  <div class="cs">Committed at start vs added mid-sprint</div>
+  <div class="leg"><span><span class="ld" style="background:#185FA5"></span>Committed</span><span><span class="ld" style="background:#E24B4A"></span>Mid-sprint adds</span></div>
+  <div style="position:relative;height:240px"><canvas id="c2"></canvas></div>
+</div>
+
+<!-- 3 Carryover -->
+<div class="card">
+  <div class="ct">3 · Issues carried over</div>
+  <div class="cs">Not closed by sprint end · Red ≥8 · Amber 4–7 · Green ≤3</div>
+  <div style="position:relative;height:240px"><canvas id="c3"></canvas></div>
+</div>
+
+<!-- 4 Capacity -->
+<div class="card">
+  <div class="ct">4 · Team capacity breakdown</div>
+  <div class="cs">Hours per sprint · PROD · Customer · SOL · Vacation</div>
+  <div class="leg">
+    <span><span class="ld" style="background:#639922"></span>PROD</span>
+    <span><span class="ld" style="background:#185FA5"></span>Customer</span>
+    <span><span class="ld" style="background:#EF9F27"></span>SOL</span>
+    <span><span class="ld" style="background:#B4B2A9"></span>Vacation</span>
+  </div>
+  <div style="position:relative;height:200px"><canvas id="c4"></canvas></div>
+</div>
+
+<!-- 5 PROD Focus Heatmap -->
+<div class="card">
+  <div class="ct">5 · PROD focus % — per person per sprint</div>
+  <div class="cs">% of individual work hours on platform work · <span class="ld" style="background:#EAF3DE;border:1px solid #C0DD97"></span> ≥75% · <span class="ld" style="background:#C0DD97"></span> 65–74% · <span class="ld" style="background:#FAEEDA"></span> 50–64% · <span class="ld" style="background:#FCEBEB"></span> &lt;50%</div>
+  <div class="ht-wrap">
+    <table class="ht">
+      <thead><tr><th class="nm">Person</th><th>Dec 15</th><th>Dec 29</th><th>Jan 12</th><th>Jan 26</th><th>Feb 9</th><th>Feb 23</th><th>Mar 9</th><th>Mar 23</th><th>Apr 6</th><th>Apr 20</th><th>May 4*</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Jelle L.</td><td class="r">39%</td><td class="lg">70%</td><td class="lg">74%</td><td class="g">75%</td><td class="g">76%</td><td class="g">80%</td><td class="y">56%</td><td class="y">64%</td><td class="g">76%</td><td class="g">82%</td><td class="g">81%</td></tr>
+        <tr><td class="nm">Steven D.</td><td class="y">55%</td><td class="y">55%</td><td class="y">49%</td><td class="r">34%</td><td class="y">53%</td><td class="lg">62%</td><td class="y">59%</td><td class="r">38%</td><td class="lg">63%</td><td class="y">52%</td><td class="lg">64%</td></tr>
+        <tr><td class="nm">Tom V.</td><td class="y">51%</td><td class="g">82%</td><td class="lg">66%</td><td class="lg">72%</td><td class="g">75%</td><td class="lg">68%</td><td class="lg">64%</td><td class="lg">67%</td><td class="abs">absent</td><td class="g">76%</td><td class="g">78%</td></tr>
+        <tr><td class="nm">Cristiano B.</td><td class="g">89%</td><td class="g">94%</td><td class="g">88%</td><td class="g">84%</td><td class="g">83%</td><td class="lg">65%</td><td class="na" colspan="5">left team 1/3/2026</td></tr>
+        <tr><td class="nm">Mitch D.</td><td class="na" colspan="9">joined Apr 2026</td><td class="r">37%</td><td class="lg">62%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 6 Utilisation -->
+<div class="card">
+  <div class="ct">6 · Team utilisation (excl. vacation)</div>
+  <div class="cs">Work hrs ÷ available days × 8 · Orange = overtime &gt;100%</div>
+  <div class="ht-wrap">
+    <table class="ht">
+      <thead><tr><th class="nm">Person</th><th>Dec 15</th><th>Dec 29</th><th>Jan 12</th><th>Jan 26</th><th>Feb 9</th><th>Feb 23</th><th>Mar 9</th><th>Mar 23</th><th>Apr 6</th><th>Apr 20</th><th>May 4*</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Jelle L.</td><td class="g">97%</td><td class="g">96%</td><td class="g">97%</td><td class="g">97%</td><td class="g">98%</td><td class="g">98%</td><td class="g">98%</td><td class="g">96%</td><td class="g">98%</td><td class="g">97%</td><td class="y">49%†</td></tr>
+        <tr><td class="nm">Steven D.</td><td class="g">98%</td><td class="g">98%</td><td class="g">97%</td><td class="g">98%</td><td class="g">98%</td><td class="g">98%</td><td class="ot">101%</td><td class="g">98%</td><td class="ot">101%</td><td class="y">94%</td><td class="r">87%†</td></tr>
+        <tr><td class="nm">Tom V.</td><td class="g">96%</td><td class="g">96%</td><td class="ot">101%</td><td class="g">97%</td><td class="y">93%</td><td class="ot">102%</td><td class="ot" style="background:#EF9F27">109%</td><td class="g">98%</td><td class="abs">absent</td><td class="g">98%</td><td class="g">98%†</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:10px;color:#6b778c;margin-top:5px">† Sprint still running (ends May 17). Orange = overtime &gt;100%.</p>
+</div>
+
+<!-- 7 Absence -->
+<div class="card">
+  <div class="ct">7 · Absence heatmap — days absent per sprint</div>
+  <div class="cs">Vacation + leave of absence · Dark red = full sprint absent</div>
+  <div class="ht-wrap">
+    <table class="ht">
+      <thead><tr><th class="nm">Person</th><th>Dec 15</th><th>Dec 29</th><th>Jan 12</th><th>Jan 26</th><th>Feb 9</th><th>Feb 23</th><th>Mar 9</th><th>Mar 23</th><th>Apr 6</th><th>Apr 20</th><th>May 4*</th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Jelle L.</td><td class="y">4.9</td><td class="y">4.9</td><td class="xz">1.0</td><td class="xz">0</td><td class="xz">1.0</td><td class="xz">1.5</td><td class="xz">0</td><td class="xz">2.9</td><td class="xz">1.0</td><td class="xz">1.9</td><td class="xz">0</td></tr>
+        <tr><td class="nm">Steven D.</td><td class="a9">6.9</td><td class="y">5.0</td><td class="xz">0.5</td><td class="xz">1.5</td><td class="xz">1.5</td><td class="xz">0.5</td><td class="xz">0.5</td><td class="xz">0.5</td><td class="y">2.5</td><td class="xz">1.5</td><td class="xz">1.5</td></tr>
+        <tr><td class="nm">Tom V.</td><td class="y">4.9</td><td class="y">4.9</td><td class="xz">1.5</td><td class="y">4.4</td><td class="y">5.8</td><td class="xz">1.5</td><td class="xz">1.9</td><td class="xz">1.9</td><td class="full-abs">9.8</td><td class="xz">1.9</td><td class="xz">2.9</td></tr>
+        <tr><td class="nm">Cristiano B.</td><td class="xz">1.0</td><td class="xz">1.0</td><td class="xz">0</td><td class="xz">0</td><td class="xz">1.0</td><td class="y">5.0</td><td class="na" colspan="5">left team 1/3/2026</td></tr>
+        <tr><td class="nm">Mitch D.</td><td class="na" colspan="9">joined Apr 2026</td><td class="xz">1.0</td><td class="xz">1.0</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 8 Team Size -->
+<div class="card">
+  <div class="ct">8 · Effective team size</div>
+  <div class="cs">Active FTE developers per sprint · Apr 6 = 2 effective (Tom on leave)</div>
+  <div style="position:relative;height:240px"><canvas id="c5"></canvas></div>
+</div>
+
+<!-- Management Signals -->
+<div class="sh">Management consistency check</div>
+<div class="sigs">
+  <div class="sig sig-g"><strong>Velocity: 13% → 75% over 11 sprints</strong>Consistent positive trend through team size reduction and Tom's Apr 6 absence. Team is becoming predictable.</div>
+  <div class="sig sig-g"><strong>Q1 2026 roadmap: 100% delivered</strong>PROD-41985 + PROD-42034 closed. PROD-42034 used only 7% of budget — excellent benchmark for spike sizing.</div>
+  <div class="sig sig-a"><strong>Mid-sprint adds: 0 → 10 (structural growth)</strong>Without a "Flying" track with a cap, PROD roadmap work keeps being displaced by reactive requests.</div>
+  <div class="sig sig-a"><strong>Customer work: 15% → 44% (3× in 5 months)</strong>No governance gate. PROD focus on track to drop below 50% routinely by Q3.</div>
+  <div class="sig sig-a"><strong>Absence not in sprint planning</strong>Tom's 9.8d LoA in Apr 6 not accounted for — ~70h commitment gap.</div>
+  <div class="sig sig-r"><strong>PROD-40670 carried 8 sprints before rejection</strong>SOL-1020 (Create DoR) open since Dec 2025 — still In Progress after 5 months.</div>
+  <div class="sig sig-r"><strong>PROD-41924: 35+ days, no roadmap entry</strong>Ungoverned capacity since Q4 2025. Needs governance or stop.</div>
+  <div class="sig sig-b"><strong>Mitch onboarding on track: 37% → 62%</strong>Expected 70%+ by Q3 — faster than typical trajectory.</div>
+  <div class="sig sig-b"><strong>AI tooling delivering real output</strong>Claude Code + CodeLaser active since Apr 20. Track stories-per-developer-day as baseline.</div>
+</div>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const S=['Dec 15','Dec 29','Jan 12','Jan 26','Feb 9','Feb 23','Mar 9','Mar 23','Apr 6','Apr 20','May 4*'];
+const G='#639922',A='#BA7517',R='#E24B4A',B='#185FA5';
+const opts={responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw}${c.dataset.label?.includes('%')||c.chart.canvas.id==='c1'?'%':c.chart.canvas.id==='c4'?'h':''}`}}},scales:{x:{grid:{color:'rgba(0,0,0,0.05)'},border:{display:false},ticks:{font:{size:10}}},y:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}}}};
+
+const comp=[13,46,57,33,67,67,68,72,75,73,70];
+new Chart('c1',{type:'bar',data:{labels:S,datasets:[{data:comp,backgroundColor:comp.map(v=>v>=65?G:v>=40?A:R),borderRadius:4}]},options:{...opts,scales:{...opts.scales,x:{...opts.scales.x,max:100,ticks:{...opts.scales.x.ticks,callback:v=>v+'%'}}}}});
+
+new Chart('c2',{type:'bar',data:{labels:S,datasets:[{label:'Committed',data:[11,11,14,16,16,14,14,12,13,12,16],backgroundColor:B,stack:'s'},{label:'Mid adds',data:[5,2,0,2,7,4,5,6,7,10,8],backgroundColor:R,stack:'s'}]},options:{...opts,plugins:{...opts.plugins,tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:true,max:28,grid:{color:'rgba(0,0,0,0.05)'},border:{display:false},ticks:{font:{size:10}}},y:{stacked:true,grid:{display:false},border:{display:false},ticks:{font:{size:10}}}}}});
+
+const co=[13,6,6,10,5,4,4,3,4,5,6];
+new Chart('c3',{type:'bar',data:{labels:S,datasets:[{data:co,backgroundColor:co.map(v=>v>=8?R:v>=5?A:G),borderRadius:4}]},options:{...opts,scales:{...opts.scales,x:{...opts.scales.x,max:15}}}});
+
+new Chart('c4',{type:'bar',data:{labels:S,datasets:[{label:'PROD',data:[113,149,204,179,172,172,135,129,114,170,152],backgroundColor:G,stack:'c'},{label:'Customer',data:[46,28,75,81,54,60,104,112,83,145,114],backgroundColor:B,stack:'c'},{label:'SOL',data:[16,13,14,9,14,18,19,23,15,18,15],backgroundColor:'#EF9F27',stack:'c'},{label:'Vacation',data:[142,126,24,47,75,67,60,51,106,59,43],backgroundColor:'#B4B2A9',stack:'c'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{stacked:true,ticks:{autoSkip:false,maxRotation:40,font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'},border:{display:false}},y:{stacked:true,ticks:{callback:v=>v+'h',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'},border:{display:false}}}}});
+
+const ts=[4,4,4,4,4,4,3,3,2,4,4];
+new Chart('c5',{type:'bar',data:{labels:S,datasets:[{data:ts,backgroundColor:ts.map(v=>v===4?G:v===3?A:R),borderRadius:4}]},options:{...opts,scales:{...opts.scales,x:{...opts.scales.x,max:5,ticks:{...opts.scales.x.ticks,stepSize:1}}}}});
+</script>
+</body>
+</html>
