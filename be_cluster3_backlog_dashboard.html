@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BE Cluster 3 — Backlog Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:      #080a0e;
+  --s1:      #0e1116;
+  --s2:      #141820;
+  --s3:      #1c2230;
+  --br:      rgba(255,255,255,.06);
+  --br2:     rgba(255,255,255,.12);
+  --text:    #e2e8f0;
+  --muted:   #64748b;
+  --faint:   #1e2a3a;
+
+  --crit:  #ef4444;  --crit-d:  #7f1d1d;  --crit-t:  #fca5a5;
+  --hot:   #f97316;  --hot-d:   #7c2d12;  --hot-t:   #fdba74;
+  --warm:  #eab308;  --warm-d:  #713f12;  --warm-t:  #fde047;
+  --fresh: #22c55e;  --fresh-d: #14532d;  --fresh-t: #86efac;
+
+  --bug:   #ef4444;  --def:  #f97316;  --sto:  #3b82f6;
+  --tsk:   #8b5cf6;  --ham:  #10b981;  --epi:  #06b6d4;
+  --oth:   #64748b;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 32px 40px 24px;
+  border-bottom: 1px solid var(--br2);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+}
+.h-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.h-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1;
+  color: var(--text);
+}
+.h-title em { color: var(--crit); font-style: normal; }
+.h-sub {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.h-stats {
+  display: flex;
+  gap: 32px;
+}
+.hstat {
+  text-align: right;
+}
+.hstat-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+}
+.hstat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.vc { color: var(--crit-t); }
+.vh { color: var(--hot-t); }
+
+/* ── GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--br);
+  border-top: 1px solid var(--br);
+}
+.full { grid-column: 1 / -1; }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--s1);
+  padding: 28px 32px;
+}
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.panel-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+/* ── CHART CONTAINERS ── */
+.chart-wrap { position: relative; width: 100%; }
+
+/* ── LEGEND ── */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-bottom: 18px;
+}
+.leg {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── ALERT STRIPS ── */
+.oldest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.oldest-card {
+  background: var(--s2);
+  border: 1px solid var(--br2);
+  border-radius: 6px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--crit);
+}
+.oldest-card.hot { border-left-color: var(--hot); }
+.oc-key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #60a5fa;
+  margin-bottom: 4px;
+  text-decoration: none;
+  display: block;
+}
+.oc-key:hover { text-decoration: underline; }
+.oc-age {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.oc-age.crit { color: var(--crit-t); }
+.oc-age.hot  { color: var(--hot-t); }
+.oc-cust {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.oc-sum {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* ── RATIO BAR (type proportion per client) ── */
+.ratio-rows { display: flex; flex-direction: column; gap: 10px; }
+.ratio-row { display: flex; align-items: center; gap: 10px; }
+.ratio-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  width: 70px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.ratio-bar {
+  flex: 1;
+  display: flex;
+  height: 18px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.ratio-seg { height: 100%; transition: width .3s; }
+.ratio-total {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── FOOTER ── */
+footer {
+  padding: 14px 40px;
+  border-top: 1px solid var(--br);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .08em;
+  color: var(--faint);
+  display: flex;
+  justify-content: space-between;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="h-eyebrow">Sofico · BE Cluster 3 · Backlog analysis · Sprint excluded</div>
+    <h1 class="h-title">Backlog <em>Health</em> Dashboard</h1>
+    <p class="h-sub">287 open issues across 9 customers · Generated 2026-05-18</p>
+  </div>
+  <div class="h-stats">
+    <div class="hstat">
+      <div class="hstat-val vc">241</div>
+      <div class="hstat-label">critical + hot<br>&gt;90 days old</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val vh">214d</div>
+      <div class="hstat-label">average age<br>across backlog</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" style="color:var(--warm-t)">418d</div>
+      <div class="hstat-label">oldest item<br>FLEDK-326</div>
+    </div>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- 1. AGE BANDS PER CUSTOMER — full width -->
+  <div class="panel full">
+    <div class="panel-label">Client focus · age risk</div>
+    <div class="panel-title">Age distribution per customer</div>
+    <div class="legend">
+      <div class="leg"><span class="leg-sq" style="background:var(--crit)"></span>Critical &gt;180d</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--hot)"></span>Hot 91–180d</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--warm)"></span>Warm 30–90d</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--fresh)"></span>Fresh &lt;30d</div>
+    </div>
+    <div class="chart-wrap" style="height:260px">
+      <canvas id="c-age-cust" role="img" aria-label="Stacked horizontal bar showing age bands per customer. Fleggaard has 115 items with 74 critical. BMW NL has highest average age at 257 days."></canvas>
+    </div>
+  </div>
+
+  <!-- 2. TYPE DONUT -->
+  <div class="panel">
+    <div class="panel-label">Type mix</div>
+    <div class="panel-title">Backlog by issue type</div>
+    <div class="legend">
+      <div class="leg"><span class="leg-sq" style="background:var(--tsk)"></span>Task (76)</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--sto)"></span>Story (46)</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--bug)"></span>Bug (40)</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--ham)"></span>H&amp;AM (38)</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--epi)"></span>Epic (35)</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--def)"></span>Defect (26)</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--oth)"></span>Other (26)</div>
+    </div>
+    <div class="chart-wrap" style="height:220px">
+      <canvas id="c-type-donut" role="img" aria-label="Donut chart of issue types: Task 76, Story 46, Bug 40, H&AM 38, Epic 35, Defect 26, Other 26."></canvas>
+    </div>
+  </div>
+
+  <!-- 3. AGE HISTOGRAM -->
+  <div class="panel">
+    <div class="panel-label">Age distribution</div>
+    <div class="panel-title">Issues by age bucket</div>
+    <div style="height:20px"></div>
+    <div class="chart-wrap" style="height:220px">
+      <canvas id="c-age-hist" role="img" aria-label="Bar chart: 0 fresh, 46 warm 31-90d, 86 hot 91-180d, 83 aged 181-270d, 50 aged 271-360d, 22 very old 361d+."></canvas>
+    </div>
+  </div>
+
+  <!-- 4. TYPE PER CUSTOMER — full width stacked bar -->
+  <div class="panel full">
+    <div class="panel-label">Client focus · type breakdown</div>
+    <div class="panel-title">Issue type composition per customer</div>
+    <div class="legend">
+      <div class="leg"><span class="leg-sq" style="background:var(--bug)"></span>Bug</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--def)"></span>Defect</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--sto)"></span>Story</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--tsk)"></span>Task</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--ham)"></span>H&amp;AM</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--epi)"></span>Epic</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--oth)"></span>Other</div>
+    </div>
+    <div class="chart-wrap" style="height:260px">
+      <canvas id="c-type-cust" role="img" aria-label="Stacked bar chart showing issue types per customer. Fleggaard has 115 items with many Epics, Stories and Tasks."></canvas>
+    </div>
+  </div>
+
+  <!-- 5. TYPE PROPORTION (ratio bars) -->
+  <div class="panel">
+    <div class="panel-label">Client focus · proportional</div>
+    <div class="panel-title">Type ratio per customer</div>
+    <div class="legend" style="margin-bottom:16px">
+      <div class="leg"><span class="leg-sq" style="background:var(--bug)"></span>Bug</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--def)"></span>Defect</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--sto)"></span>Story</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--tsk)"></span>Task</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--ham)"></span>H&amp;AM</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--epi)"></span>Epic</div>
+      <div class="leg"><span class="leg-sq" style="background:var(--oth)"></span>Other</div>
+    </div>
+    <div class="ratio-rows" id="ratio-rows"></div>
+  </div>
+
+  <!-- 6. OLDEST ITEMS PER CUSTOMER -->
+  <div class="panel">
+    <div class="panel-label">Critical watch</div>
+    <div class="panel-title">Oldest open item per customer</div>
+    <div class="oldest-grid" id="oldest-grid"></div>
+  </div>
+
+  <!-- 7. CRITICAL RATIO BAR — full width -->
+  <div class="panel full">
+    <div class="panel-label">Risk summary</div>
+    <div class="panel-title">% of backlog that is critical (&gt;180 days) per customer</div>
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="c-crit-pct" role="img" aria-label="Bar chart showing percentage of critical items per customer. BMW NL has 78% critical, BMW BE has 65%."></canvas>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>BE Cluster 3 · Sofico · sofico.atlassian.net · Sprint 8156 excluded</span>
+  <span>287 backlog issues · 9 customers · Generated 2026-05-18</span>
+</footer>
+
+<script>
+const CUSTS  = ['FLEDK','TFS BE','VW BE','BMW BE','VAN BE','BMW NL','ALD BE','ALD Gen','ALD Nordics'];
+const TOTALS = [115, 43, 40, 26, 22, 18, 12, 10, 1];
+const CRIT   = [74, 7, 22, 17, 12, 14, 8, 1, 0];
+const HOT    = [23, 25, 14, 9, 6, 3, 4, 2, 1];
+const WARM   = [18, 11, 4, 0, 4, 1, 0, 7, 0];
+const FRESH  = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+const AVG    = [214, 127, 198, 224, 228, 257, 208, 100, 88];
+const OLDEST = [418, 357, 410, 418, 417, 404, 334, 220, 88];
+
+const TYPE_DATA = {
+  Bug:    [14, 6, 5, 6, 4, 3, 2, 0, 0],
+  Defect: [3,  6, 3, 6, 1, 2, 5, 0, 0],
+  Story:  [29, 1, 5, 1, 1, 6, 3, 0, 0],
+  Task:   [25, 4,18,11, 4, 4, 2, 8, 0],
+  'H&AM': [16, 6, 5, 1, 7, 2, 0, 0, 1],
+  Epic:   [22, 2, 4, 1, 3, 1, 0, 2, 0],
+  Other:  [6, 18, 0, 0, 2, 0, 0, 0, 0],
+};
+
+const OLDEST_ITEMS = [
+  {cust:'FLEDK',   key:'FLEDK-326',   age:418, sum:'TPSCM_INTERFACE Clever API Development',       crit:true},
+  {cust:'VW BE',   key:'VWBE-6859',   age:410, sum:'Contract Mgt: RV changing on pre-close',       crit:true},
+  {cust:'VAN BE',  key:'VANBE-1493',  age:417, sum:'VehicleOrder Export - cancelled vehicle issue', crit:true},
+  {cust:'BMW BE',  key:'BMWBE-5243',  age:418, sum:'Sharepoint files lost',                         crit:true},
+  {cust:'BMW NL',  key:'BMWNL-11841', age:404, sum:'Dolphin project introduction',                  crit:true},
+  {cust:'TFS BE',  key:'TFSBE-1466',  age:357, sum:'DIV interface',                                 crit:true},
+  {cust:'ALD BE',  key:'ALDBE-4010',  age:334, sum:'Extend autoinvoicegeneration flag properties',  crit:true},
+  {cust:'ALD Gen', key:'ALD-792',     age:220, sum:'Jasper report - subreport configuration conflict', crit:true},
+  {cust:'ALD Nordics',key:'ALDNORDICS-207',age:88,sum:'Sweden - Rundeck script failure/timeout',   crit:false},
+];
+
+const TYPE_COLORS = {
+  Bug:'#ef4444', Defect:'#f97316', Story:'#3b82f6',
+  Task:'#8b5cf6', 'H&AM':'#10b981', Epic:'#06b6d4', Other:'#64748b'
+};
+
+const DEFAULTS = {
+  color: '#e2e8f0',
+  font: { family: "'DM Sans', sans-serif", size: 11 },
+};
+Chart.defaults.color = DEFAULTS.color;
+Chart.defaults.font = DEFAULTS.font;
+
+const gridColor = 'rgba(255,255,255,.06)';
+const tickColor = '#64748b';
+
+/* ── 1. AGE BANDS PER CUSTOMER (stacked horizontal bar) ── */
+new Chart(document.getElementById('c-age-cust'), {
+  type: 'bar',
+  data: {
+    labels: CUSTS,
+    datasets: [
+      { label: 'Critical >180d', data: CRIT,  backgroundColor: '#ef4444', borderWidth: 0, borderRadius: 0 },
+      { label: 'Hot 91–180d',    data: HOT,   backgroundColor: '#f97316', borderWidth: 0 },
+      { label: 'Warm 30–90d',    data: WARM,  backgroundColor: '#eab308', borderWidth: 0 },
+      { label: 'Fresh <30d',     data: FRESH, backgroundColor: '#22c55e', borderWidth: 0 },
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+    scales: {
+      x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor } },
+      y: { stacked: true, grid: { display: false }, ticks: { color: '#e2e8f0', font: { family: "'JetBrains Mono', monospace", size: 11 } } }
+    }
+  }
+});
+
+/* ── 2. TYPE DONUT ── */
+new Chart(document.getElementById('c-type-donut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Task','Story','Bug','H&AM','Epic','Defect','Other'],
+    datasets: [{
+      data: [76, 46, 40, 38, 35, 26, 26],
+      backgroundColor: ['#8b5cf6','#3b82f6','#ef4444','#10b981','#06b6d4','#f97316','#64748b'],
+      borderWidth: 2,
+      borderColor: '#080a0e',
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '62%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed/287*100)}%)`
+        }
+      }
+    }
+  }
+});
+
+/* ── 3. AGE HISTOGRAM ── */
+new Chart(document.getElementById('c-age-hist'), {
+  type: 'bar',
+  data: {
+    labels: ['< 30d','31–90d','91–180d','181–270d','271–360d','361d+'],
+    datasets: [{
+      label: 'Issues',
+      data: [0, 46, 86, 83, 50, 22],
+      backgroundColor: ['#22c55e','#eab308','#f97316','#ef4444','#dc2626','#991b1b'],
+      borderWidth: 0,
+      borderRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: tickColor, font: { family: "'JetBrains Mono', monospace", size: 10 } } },
+      y: { grid: { color: gridColor }, ticks: { color: tickColor } }
+    }
+  }
+});
+
+/* ── 4. TYPE PER CUSTOMER (stacked vertical bar) ── */
+new Chart(document.getElementById('c-type-cust'), {
+  type: 'bar',
+  data: {
+    labels: CUSTS,
+    datasets: Object.entries(TYPE_DATA).map(([label, data]) => ({
+      label, data,
+      backgroundColor: TYPE_COLORS[label],
+      borderWidth: 0,
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { color: '#e2e8f0', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+      y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor } }
+    }
+  }
+});
+
+/* ── 5. RATIO BARS ── */
+(function(){
+  const rows = document.getElementById('ratio-rows');
+  CUSTS.forEach((c, ci) => {
+    const total = TOTALS[ci];
+    if (!total) return;
+    const segs = Object.entries(TYPE_DATA).map(([type, vals]) => {
+      const n = vals[ci];
+      const pct = Math.round(n / total * 100);
+      return `<div class="ratio-seg" style="width:${pct}%;background:${TYPE_COLORS[type]}" title="${type}: ${n}"></div>`;
+    }).join('');
+    rows.innerHTML += `
+      <div class="ratio-row">
+        <span class="ratio-label">${c}</span>
+        <div class="ratio-bar">${segs}</div>
+        <span class="ratio-total">${total}</span>
+      </div>`;
+  });
+})();
+
+/* ── 6. OLDEST ITEMS ── */
+(function(){
+  const grid = document.getElementById('oldest-grid');
+  const BASE = 'https://sofico.atlassian.net/browse/';
+  OLDEST_ITEMS.forEach(item => {
+    const cls = item.age > 180 ? 'crit' : 'hot';
+    const cardCls = item.age > 180 ? '' : 'hot';
+    grid.innerHTML += `
+      <div class="oldest-card ${cardCls}">
+        <a class="oc-key" href="${BASE}${item.key}" target="_blank" rel="noopener">${item.key}</a>
+        <div class="oc-age ${cls}">${item.age}d</div>
+        <div class="oc-cust">${item.cust}</div>
+        <div class="oc-sum">${item.sum}</div>
+      </div>`;
+  });
+})();
+
+/* ── 7. CRITICAL % PER CUSTOMER ── */
+(function(){
+  const pcts = CUSTS.map((c, i) => TOTALS[i] ? Math.round(CRIT[i] / TOTALS[i] * 100) : 0);
+  const colors = pcts.map(p => p >= 70 ? '#ef4444' : p >= 50 ? '#f97316' : p >= 30 ? '#eab308' : '#22c55e');
+  new Chart(document.getElementById('c-crit-pct'), {
+    type: 'bar',
+    data: {
+      labels: CUSTS,
+      datasets: [{
+        label: '% critical (>180d)',
+        data: pcts,
+        backgroundColor: colors,
+        borderWidth: 0,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.parsed}% of ${TOTALS[ctx.dataIndex]} items are critical (>${180}d)`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#e2e8f0', font: { family: "'JetBrains Mono', monospace", size: 11 } } },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color: tickColor, callback: v => v + '%' },
+          max: 100,
+        }
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

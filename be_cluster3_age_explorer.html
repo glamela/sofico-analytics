@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BE Cluster 3 — Age Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f12;
+  --surface: #13161a;
+  --surface2: #1a1e24;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8eaed;
+  --muted: #7a8290;
+  --faint: #3a3f48;
+
+  --fresh:  #22c55e; --fresh-bg:  rgba(34,197,94,.12);  --fresh-text:  #86efac;
+  --warm:   #f59e0b; --warm-bg:   rgba(245,158,11,.12); --warm-text:   #fcd34d;
+  --hot:    #f97316; --hot-bg:    rgba(249,115,22,.12);  --hot-text:    #fdba74;
+  --crit:   #ef4444; --crit-bg:   rgba(239,68,68,.12);   --crit-text:   #fca5a5;
+
+  --bug:    rgba(239,68,68,.15);    --bug-t:    #fca5a5;
+  --defect: rgba(245,158,11,.15);   --defect-t: #fcd34d;
+  --story:  rgba(59,130,246,.15);   --story-t:  #93c5fd;
+  --task:   rgba(139,92,246,.15);   --task-t:   #c4b5fd;
+  --ham:    rgba(34,197,94,.15);    --ham-t:    #86efac;
+  --other:  rgba(107,114,128,.15);  --other-t:  #d1d5db;
+
+  --sprint-bg: rgba(59,130,246,.12); --sprint-t: #93c5fd;
+  --backlog-bg: rgba(107,114,128,.12); --backlog-t: #9ca3af;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.hd-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.hd-title {
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: -.01em;
+  color: var(--text);
+}
+.hd-title strong { font-weight: 500; }
+.hd-meta {
+  margin-left: auto;
+  text-align: right;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.hd-meta span { color: var(--text); }
+
+/* ── METRIC STRIP ── */
+.metrics {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.metric {
+  flex: 1;
+  padding: 14px 20px;
+  background: var(--bg);
+  min-width: 0;
+}
+.metric-val {
+  font-size: 28px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.metric-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mc { color: var(--crit-text); }
+.mh { color: var(--hot-text); }
+.mw { color: var(--warm-text); }
+.mf { color: var(--fresh-text); }
+
+/* ── AGE BAR ── */
+.age-bar-wrap {
+  display: flex;
+  height: 3px;
+}
+.age-seg { height: 100%; transition: width .3s; }
+
+/* ── CONTROLS ── */
+.controls {
+  display: flex;
+  gap: 8px;
+  padding: 14px 32px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--surface);
+}
+select, input[type=text] {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+select:hover, input[type=text]:hover { border-color: rgba(255,255,255,.25); }
+select:focus, input[type=text]:focus { border-color: rgba(255,255,255,.4); }
+input[type=text] { width: 220px; padding-left: 28px; }
+.search-wrap { position: relative; }
+.search-wrap svg {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; stroke: var(--muted); fill: none;
+  pointer-events: none;
+}
+.count-tag {
+  margin-left: auto;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.count-tag span { color: var(--text); }
+
+/* ── LEGEND ── */
+.legend {
+  display: flex;
+  gap: 18px;
+  padding: 10px 32px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.legend-sq {
+  width: 8px; height: 8px; border-radius: 2px;
+}
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+thead tr {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+th {
+  padding: 9px 12px;
+  text-align: left;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: color .15s;
+}
+th:hover { color: var(--text); }
+th .si { margin-left: 4px; opacity: .4; }
+th.sorted .si { opacity: 1; color: var(--text); }
+
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+tr:hover td { background: var(--surface2); }
+
+/* column widths */
+th:nth-child(1), td:nth-child(1) { width: 72px; }
+th:nth-child(2), td:nth-child(2) { width: 100px; }
+th:nth-child(3), td:nth-child(3) { width: 80px; }
+th:nth-child(4), td:nth-child(4) { width: 62px; }
+th:nth-child(5), td:nth-child(5) { width: 130px; }
+th:nth-child(6), td:nth-child(6) { min-width: 200px; }
+th:nth-child(7), td:nth-child(7) { width: 90px; }
+th:nth-child(8), td:nth-child(8) { width: 50px; }
+
+/* ── BADGES ── */
+.ab {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.af { background: var(--fresh-bg); color: var(--fresh-text); }
+.aw { background: var(--warm-bg);  color: var(--warm-text); }
+.ah { background: var(--hot-bg);   color: var(--hot-text); }
+.ac { background: var(--crit-bg);  color: var(--crit-text); }
+
+.tb {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.t-bug   { background: var(--bug);    color: var(--bug-t); }
+.t-def   { background: var(--defect); color: var(--defect-t); }
+.t-sto   { background: var(--story);  color: var(--story-t); }
+.t-tsk   { background: var(--task);   color: var(--task-t); }
+.t-ham   { background: var(--ham);    color: var(--ham-t); }
+.t-oth   { background: var(--other);  color: var(--other-t); }
+
+.pl-s { background: var(--sprint-bg);  color: var(--sprint-t);  font-size: 9px; padding: 1px 4px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; }
+.pl-b { background: var(--backlog-bg); color: var(--backlog-t); font-size: 9px; padding: 1px 4px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; }
+
+.sdot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  margin-right: 5px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.s-done { background: #22c55e; }
+.s-wip  { background: #3b82f6; }
+.s-todo { background: #6b7280; }
+
+.kl {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #60a5fa;
+  text-decoration: none;
+}
+.kl:hover { text-decoration: underline; }
+
+.fv-tag {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.no-results {
+  padding: 48px;
+  text-align: center;
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+
+/* footer */
+footer {
+  padding: 16px 32px;
+  border-top: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--faint);
+  display: flex;
+  justify-content: space-between;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="hd-label">Sofico · Product Platform Team</div>
+    <h1 class="hd-title">BE Cluster 3 &mdash; <strong>Age Explorer</strong></h1>
+  </div>
+  <div class="hd-meta">
+    Sprint <span>8156 · BE_CLUSTER_3_20260518</span><br>
+    Generated <span>2026-05-18</span><br>
+    Source <span>Jira · sofico.atlassian.net</span>
+  </div>
+</header>
+
+<div class="metrics" id="metrics">
+  <div class="metric"><div class="metric-val" id="m-total">—</div><div class="metric-label">issues shown</div></div>
+  <div class="metric"><div class="metric-val mc" id="m-crit">—</div><div class="metric-label">&gt;180d · critical</div></div>
+  <div class="metric"><div class="metric-val mh" id="m-hot">—</div><div class="metric-label">91–180d · hot</div></div>
+  <div class="metric"><div class="metric-val mw" id="m-warm">—</div><div class="metric-label">30–90d · warm</div></div>
+  <div class="metric"><div class="metric-val mf" id="m-fresh">—</div><div class="metric-label">&lt;30d · fresh</div></div>
+</div>
+
+<div class="age-bar-wrap" id="abar">
+  <div class="age-seg" style="background:#22c55e"></div>
+  <div class="age-seg" style="background:#f59e0b"></div>
+  <div class="age-seg" style="background:#f97316"></div>
+  <div class="age-seg" style="background:#ef4444"></div>
+</div>
+
+<div class="controls">
+  <div class="search-wrap">
+    <svg viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><path d="m9.5 9.5 3 3" stroke-linecap="round"/></svg>
+    <input type="text" id="fsearch" placeholder="Search key or summary…" oninput="render()">
+  </div>
+  <select id="fpool" onchange="render()">
+    <option value="all">Sprint + Backlog</option>
+    <option value="sprint">Sprint only</option>
+    <option value="backlog">Backlog only</option>
+  </select>
+  <select id="fband" onchange="render()">
+    <option value="all">All ages</option>
+    <option value="c">&gt;180 days (critical)</option>
+    <option value="h">91–180 days (hot)</option>
+    <option value="w">30–90 days (warm)</option>
+    <option value="f">&lt;30 days (fresh)</option>
+  </select>
+  <select id="fcust" onchange="render()"><option value="all">All customers</option></select>
+  <select id="fstat" onchange="render()">
+    <option value="all">All statuses</option>
+    <option value="new">To do</option>
+    <option value="indeterminate">In progress</option>
+    <option value="done">Done</option>
+  </select>
+  <select id="ftype" onchange="render()">
+    <option value="all">All types</option>
+    <option value="Bug">Bug</option>
+    <option value="Defect">Defect</option>
+    <option value="Story">Story</option>
+    <option value="Task">Task</option>
+    <option value="H&amp;AM">H&amp;AM</option>
+    <option value="Epic">Epic</option>
+    <option value="Config">Config</option>
+  </select>
+  <div class="count-tag" id="cnt"></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-sq" style="background:#ef4444"></span>Critical &gt;180d</div>
+  <div class="legend-item"><span class="legend-sq" style="background:#f97316"></span>Hot 91–180d</div>
+  <div class="legend-item"><span class="legend-sq" style="background:#f59e0b"></span>Warm 30–90d</div>
+  <div class="legend-item"><span class="legend-sq" style="background:#22c55e"></span>Fresh &lt;30d</div>
+  <div class="legend-item" style="margin-left:16px"><span class="sdot s-done"></span>Done</div>
+  <div class="legend-item"><span class="sdot s-wip"></span>In progress</div>
+  <div class="legend-item"><span class="sdot s-todo"></span>To do</div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+  <th onclick="sort('age')">Age <span class="si" id="sa">↓</span></th>
+  <th onclick="sort('key')">Key <span class="si" id="sk">↕</span></th>
+  <th onclick="sort('cust')">Customer <span class="si" id="sc2">↕</span></th>
+  <th onclick="sort('type')">Type <span class="si" id="st2">↕</span></th>
+  <th onclick="sort('status')">Status <span class="si" id="sst">↕</span></th>
+  <th>Summary</th>
+  <th onclick="sort('created')">Created <span class="si" id="scr">↕</span></th>
+  <th>Pool</th>
+</tr>
+</thead>
+<tbody id="tb"></tbody>
+</table>
+<div id="no-results" class="no-results" style="display:none">No issues match the current filters.</div>
+</div>
+
+<footer>
+  <span>BE Cluster 3 · Sofico · sofico.atlassian.net</span>
+  <span>339 issues · sprint 8156 + backlog · generated 2026-05-18</span>
+</footer>
+
+<script>
+const D=[['FLEDK-326','FLEDK','Story','Draft','new','TPSCM_INTERFACE Clever API Development','2025-03-26',418,'backlog','FLEDK W3S3'],
+['FLEDK-333','FLEDK','Config','In Progress','indeterminate','TPSCM_CFG Fuel TPSC Bulk Operations','2025-03-26',418,'backlog','FLEDK W3S2'],
+['FLEDK-334','FLEDK','Config','In Progress','indeterminate','TPSCM_CFG Fuel TPSCs Setup','2025-03-26',418,'backlog','FLEDK W3S2'],
+['BMWBE-5243','BMW BE','Task','Open','new','Sharepoint files lost','2025-03-26',418,'backlog',''],
+['VANBE-1493','VAN BE','Bug','In Progress','indeterminate','BE_Renta_ORD_VehicleOrder_Export - Issue with cancelled vehicle order','2025-03-27',417,'backlog',''],
+['FLEDK-351','FLEDK','Epic','In Progress','indeterminate','200 ACCOUNTING','2025-03-27',417,'backlog','FLEDK W3S1'],
+['VWBE-6859','VW BE','Bug','In Test','indeterminate','Contract Mgt: RV is changing when pre-closing a contract','2025-04-03',410,'backlog',''],
+['FLEDK-384','FLEDK','Epic','In Analysis','indeterminate','Portal enhancements - API reports','2025-04-03',410,'backlog','FLEDK W3S1'],
+['VWBE-6864','VW BE','Defect','In Analysis','indeterminate','Tires MRT clause number bulk correction','2025-04-07',406,'backlog',''],
+['VWBE-6874','VW BE','Task','Ready for Test','new','Upgrade miles-fleet-management-v3 to correct version','2025-04-09',404,'backlog',''],
+['BMWNL-11841','BMW NL','Task','Open','new','Dolphin project introduction','2025-04-09',404,'backlog',''],
+['FLEDK-393','FLEDK','Story','Open','new','PCR007 - A solution for new vehicle nature','2025-04-14',399,'backlog','FLEDK W3S2'],
+['FLEDK-394','FLEDK','Story','Open','new','PCR008 - Special interest rate for Bygma Gruppen during calculation','2025-04-14',399,'backlog','FLEDK W3S3'],
+['VWBE-6896','VW BE','Task','Draft','new','Automated testing @VWBE','2025-04-23',390,'backlog',''],
+['VANBE-1541','VAN BE','Bug','Open','new','SofCalculateBelgianStructuredFormatBasedOnInvoiceNumber - Multiple invoices','2025-04-24',389,'backlog',''],
+['BMWNL-11862','BMW NL','Epic','In Analysis','indeterminate','NL - Supporting resubmission after contract creation for Miles web','2025-04-28',385,'backlog',''],
+['FLEDK-412','FLEDK','Story','Ready for Analysis','new','PCR013 - Max trailer load visible in the driver portal','2025-04-28',385,'backlog','FLEDK W3S2'],
+['BMWBE-5268','BMW BE','Defect','In Analysis','indeterminate','Miles web displays old running contract in application overview','2025-04-30',383,'backlog',''],
+['VANBE-1567','VAN BE','Bug','Ready for Test','new','PV remains reserved after removing from STC','2025-05-15',368,'backlog',''],
+['FLEDK-459','FLEDK','Epic','In Progress','indeterminate','Enhancement 1: DK_1Link_Service_Network_Invoice_Import location work','2025-05-15',368,'backlog','FLEDK W2S2'],
+['VWBE-6922','VW BE','Task','Ready for Analysis','new','Miles (BE) - Help build query to link newly created ActionsOnVP','2025-05-16',367,'backlog',''],
+['FLEDK-473','FLEDK','Task','In Progress','indeterminate','Adjusting Fleet Portal to include and process CO2 values','2025-05-22',361,'backlog','FLEDK W3S1'],
+['BMWNL-11877','BMW NL','Story','In Analysis','indeterminate','Adding pricingDetails field in request and response','2025-05-23',360,'backlog',''],
+['BMWNL-11878','BMW NL','Story','In Analysis','indeterminate','Include PriceDetails for commission and downpayment defaults','2025-05-23',360,'backlog',''],
+['BMWNL-11881','BMW NL','Story','In Analysis','indeterminate','Data model change: dedicated pricing fields','2025-05-23',360,'backlog',''],
+['BMWNL-11882','BMW NL','Story','In Analysis','indeterminate','Set downPaymentPercentage in Core Promotion API calls','2025-05-23',360,'backlog',''],
+['TFSBE-1466','TFS BE','Bug','In Test','indeterminate','DIV interface','2025-05-26',357,'backlog',''],
+['VANBE-1588','VAN BE','Epic','Draft','new','PGL Documents & Reports','2025-05-28',355,'backlog',''],
+['FLEDK-494','FLEDK','Story','In Test','indeterminate','D&R-0005 New yearly salary tax after regulation','2025-06-02',350,'backlog','FLEDK W3S1'],
+['VWBE-6942','VW BE','Task','In Progress','indeterminate','QA Automation through MMP','2025-06-11',341,'sprint',''],
+['VWBE-6938','VW BE','Bug','Open','new','Follow up VWBE-6820 - Error in FV export','2025-06-11',341,'backlog',''],
+['FLEDK-514','FLEDK','Epic','In Test','indeterminate','ASG Dealer Portal - Export after contract sign','2025-06-13',339,'backlog','FLEDK W2S2'],
+['FLEDK-516','FLEDK','Story','In Test','indeterminate','Quote Document - Changes W2','2025-06-16',336,'backlog','FLEDK W2S3'],
+['ALDBE-4010','ALD BE','Story','Awaiting Approval','new','Extend properties for autoinvoicegeneration flag','2025-06-18',334,'backlog',''],
+['FLEDK-520','FLEDK','Epic','In Analysis','indeterminate','W3 Documents & Reports','2025-06-23',329,'backlog','FLEDK W3S2'],
+['VANBE-1655','VAN BE','Release Note','Open','new','PV remains reserved after removing from STC (RN)','2025-06-26',326,'backlog',''],
+['BMWBE-5342','BMW BE','Task','Open','new','UPGR_BMW_BE - HTTP error 500','2025-06-30',322,'backlog',''],
+['FLEDK-528','FLEDK','Epic','In Progress','indeterminate','Customer Support Test Management','2025-07-02',320,'backlog',''],
+['ALDBE-4023','ALD BE','Bug','In Progress','indeterminate','Lookuptable definition with sequence issue','2025-07-03',319,'backlog',''],
+['FLEDK-539','FLEDK','Task','Open','new','Driver E-Form','2025-07-07',315,'backlog','FLEDK W2S1'],
+['FLEDK-540','FLEDK','Story','In Test','indeterminate','Supplier E-Form','2025-07-07',315,'backlog','FLEDK W2S1'],
+['VWBE-6956','VW BE','Bug','Ready for Analysis','new','VAA report preview - incorrect spelling','2025-07-07',315,'backlog',''],
+['BMWBE-5352','BMW BE','Bug','Draft','new','BMWCalculateLatePaymentInterest - Disallowed Configuration','2025-07-08',314,'backlog',''],
+['BMWBE-5364','BMW BE','Task','Reopened','new','Heartbeats not working on TEST_BMWBE','2025-07-15',307,'backlog',''],
+['FLEDK-576','FLEDK','Story','Ready for Analysis','new','SI - Support e-invoices in foreign currencies','2025-07-23',299,'backlog','FLEDK W3S3'],
+['FLEDK-578','FLEDK','Defect','Ready for Analysis','new','HO Issue W2S2: Change of JATO vehicle from dealer','2025-07-24',298,'backlog','FLEDK W3S1'],
+['FLEDK-579','FLEDK','Defect','Ready for Analysis','new','HO Issue W2S1: VAT Different Offset amount','2025-07-24',298,'backlog','FLEDK W3S2'],
+['FLEDK-584','FLEDK','Task','In Progress','indeterminate','D&R - Invoice Documents - MultiCurrency Implementation','2025-07-24',298,'backlog','FLEDK W2S1'],
+['VWBE-6975','VW BE','Task','Draft','new','Update MTG with flag file configuration functionality','2025-07-24',298,'backlog',''],
+['BMWBE-5383','BMW BE','Bug','In Progress','indeterminate','Revert Temporary ltc-dap-canon transformer patch','2025-07-25',297,'backlog',''],
+['VWBE-6980','VW BE','Bug','In Analysis','indeterminate','DataProtection archive FK constraint violated','2025-07-29',293,'sprint','20250407_2WK'],
+['FLEDK-593','FLEDK','H&AM','Draft','new','FLEDK_MIR','2025-07-30',292,'backlog','FLEDK W3S2'],
+['VANBE-1730','VAN BE','Defect','Reopened','new','[FIM] UPfleet Export errors - Double quotes','2025-08-04',287,'backlog',''],
+['FLEDK-600','FLEDK','Epic','In Progress','indeterminate','W3 Data Migration','2025-08-04',287,'backlog',''],
+['FLEDK-619','FLEDK','Task','In Test','indeterminate','D&R-0006 Early Termination Quote','2025-08-05',286,'backlog','FLEDK W3S2'],
+['FLEDK-626','FLEDK','Task','Ready for Analysis','new','D&R-0019 Ad hoc Letter - Flex customers','2025-08-05',286,'backlog','FLEDK W3S2'],
+['FLEDK-633','FLEDK','Story','In Test','indeterminate','D&R-0033 Insurance Certificate','2025-08-05',286,'backlog','FLEDK W3S2'],
+['FLEDK-637','FLEDK','Story','In Progress','indeterminate','VDR - Foreign currency invoices for vehicle sales','2025-08-07',284,'sprint','FLEDK W3S3'],
+['ALDBE-4038','ALD BE','Defect','Draft','new','No managed connections - blocking timeout 30s','2025-08-07',284,'backlog',''],
+['FLEDK-638','FLEDK','Story','Draft','new','VDR - Charge-ons in customer currency','2025-08-07',284,'backlog','FLEDK W3S3'],
+['BMWBE-5397','BMW BE','Bug','Open','new','MMP Dynamic Attributes Configuration','2025-08-11',280,'backlog',''],
+['BMWNL-11934','BMW NL','Bug','Open','new','MMP Dynamic Attributes Configuration','2025-08-11',280,'backlog',''],
+['FLEDK-643','FLEDK','Epic','Ready for Analysis','new','160 Incident and Claim Management','2025-08-11',280,'backlog',''],
+['FLEDK-644','FLEDK','Epic','In Analysis','indeterminate','180 EOC','2025-08-11',280,'backlog',''],
+['FLEDK-645','FLEDK','Epic','Draft','new','190 VDR','2025-08-11',280,'backlog',''],
+['VWBE-6998','VW BE','Task','Open','new','MMP Dynamic Attributes Configuration','2025-08-12',279,'backlog',''],
+['FLEDK-663','FLEDK','H&AM','Open','new','FLEDK SFTP - Connection to PROD SFTP','2025-08-18',273,'backlog',''],
+['BMWNL-11946','BMW NL','Task','Open','new','Failed to create session factory TEST_BMW_NL','2025-08-18',273,'backlog',''],
+['BMWNL-11952','BMW NL','Bug','In Progress','indeterminate','SRA with multicurrency rounded to two decimals','2025-08-21',270,'backlog',''],
+['TFSBE-1555','TFS BE','Epic','In Analysis','indeterminate','TFSBE PEPPOL OVERVIEW','2025-08-21',270,'backlog',''],
+['TFSBE-1592','TFS BE','Task','Ready for Analysis','new','TFSBE - PEPPOL - CONFIGURATION','2025-08-21',270,'backlog',''],
+['VWBE-7017','VW BE','Bug','In Progress','indeterminate','Reconciliation - Performance for large GL accounts','2025-08-26',265,'backlog',''],
+['FLEDK-695','FLEDK','Bug','Ready for Design','new','miles-contract-reporting: SHADOW_ENGINE_FUEL_TYPE transformation','2025-08-27',264,'backlog',''],
+['BMWBE-5421','BMW BE','Epic','Draft','new','BMWBE - PEPPOL - OVERVIEW','2025-08-27',264,'backlog',''],
+['BMWBE-5427','BMW BE','Defect','In Analysis','indeterminate','Resubmission of quote clears actual distance on confirmation','2025-09-05',255,'backlog',''],
+['FLEDK-748','FLEDK','Task','In Progress','indeterminate','General documentation on multicurrency support in Miles','2025-09-10',250,'backlog',''],
+['ALDBE-4093','ALD BE','Story','Draft','new','UBClaims Import - corrections for SDALDBE-2724','2025-09-12',248,'sprint',''],
+['BMWBE-5430','BMW BE','Defect','In Analysis','indeterminate','Wrong interest rates in floorplan financing','2025-09-12',248,'backlog',''],
+['ALDBE-4104','ALD BE','Story','Awaiting Approval','new','UBClaims Import - immobilization claim missing data','2025-09-18',242,'backlog',''],
+['VWBE-7042','VW BE','Bug','In Progress','indeterminate','Purchase option invoiced to old customer in contract','2025-09-19',241,'backlog',''],
+['VWBE-7044','VW BE','Task','Ready for Analysis','new','SME - Impossible to create vehicle order','2025-09-22',238,'sprint',''],
+['VANBE-1847','VAN BE','H&AM','In Progress','indeterminate','Fluent bit failing - PRD & NP','2025-09-22',238,'backlog',''],
+['FLEDK-792','FLEDK','Epic','In Analysis','indeterminate','FLEDK - MMP eDocs','2025-09-23',237,'backlog',''],
+['FLEDK-799','FLEDK','Story','Ready for Analysis','new','FLEDK - MMP eDocs - SMS-notifications from Scrive','2025-09-23',237,'backlog',''],
+['FLEDK-800','FLEDK','Story','In Analysis','indeterminate','FLEDK - MMP eDocs - Option to send more PDFs','2025-09-23',237,'backlog',''],
+['FLEDK-805','FLEDK','Bug','Reopened','new','RollBack Recharge - sign not reversed for attribute','2025-09-24',236,'backlog','FLEDK W3S3'],
+['FLEDK-818','FLEDK','Epic','In Analysis','indeterminate','PI & VOD - MULTI-CURRENCY','2025-09-25',235,'backlog','FLEDK W3S3'],
+['FLEDK-820','FLEDK','Epic','In Progress','indeterminate','APAR - MULTI-CURRENCY','2025-09-25',235,'backlog',''],
+['FLEDK-824','FLEDK','Config','In Progress','indeterminate','HO_W2S3_Ratebooks: UpdateRateBook + lc pricing updates','2025-09-25',235,'backlog','FLEDK W3S3'],
+['BMWBE-5441','BMW BE','Defect','Ready for Analysis','new','MMP BE - Event Not Created for Expired Quote','2025-09-25',235,'backlog',''],
+['VWBE-7053','VW BE','Epic','Ready for Analysis','new','Allocating purchase orders to one invoice','2025-09-29',231,'backlog',''],
+['FLEDK-846','FLEDK','Defect','Draft','new','Price difference check fails in foreign currency','2025-09-30',230,'backlog',''],
+['FLEDK-848','FLEDK','H&AM','In Test','indeterminate','Request MMP environment FLEDK_PRD','2025-09-30',230,'backlog','FLEDK W1S1'],
+['ALDBE-4110','ALD BE','Defect','Ready for Analysis','new','Wrong VAT amount with billing items in LUPROD','2025-10-01',229,'backlog',''],
+['BMWNL-11993','BMW NL','Story','Awaiting Approval','new','UBClaims import - Store closing reason on Incident','2025-10-07',223,'backlog',''],
+['BMWBE-5455','BMW BE','Bug','TSYS Validated','indeterminate','Credit app - old vehicles + cancelled CA issue','2025-10-07',223,'sprint',''],
+['VWBE-7057','VW BE','Task','In Progress','indeterminate','Reorder and cancellation process Miles-ORD (FUSD-3623)','2025-10-08',222,'backlog',''],
+['FLEDK-901','FLEDK','Story','Ready for Test','new','D&R-0038 Private financial over 12 months duration','2025-10-08',222,'backlog','FLEDK W3S2'],
+['VANBE-1869','VAN BE','Task','In Test','indeterminate','VANBE - Preparing and Testing PEPPOL implementation','2025-10-08',222,'backlog',''],
+['BMWNL-12008','BMW NL','Defect','In Analysis','indeterminate','Very high disk usage increase on dap-broker containers','2025-10-21',209,'backlog',''],
+['VWBE-7067','VW BE','Task','Ready for Analysis','new','Adaptation Bulk operation Open & Close Journal','2025-10-21',209,'backlog',''],
+['ALDBE-4121','ALD BE','Defect','Ready for Analysis','new','Abnormal Approve and Direct post on purchase invoices','2025-10-23',207,'backlog',''],
+['BMWNL-12011','BMW NL','Task','In Analysis','indeterminate','New CJIB fine import connector (NL)','2025-10-23',207,'backlog',''],
+['VWBE-7071','VW BE','Defect','Ready for Analysis','new','AOs sent every day instead of only once','2025-10-23',207,'backlog',''],
+['ALDBE-4122','ALD BE','Task','Ready for Analysis','new','Region 184 - Invoice Lines Recharge Amount','2025-10-24',206,'backlog',''],
+['VWBE-7077','VW BE','Defect','In Progress','indeterminate','Error reports_fleet-overview','2025-10-29',201,'sprint',''],
+['VWBE-7073','VW BE','Story','In Design','indeterminate','Hide valid mileage registrations before contract start','2025-10-29',201,'backlog',''],
+['BMWNL-12015','BMW NL','Story','Draft','new','Miles Web - Resubmission after contract creation','2025-10-29',201,'backlog',''],
+['BMWBE-5487','BMW BE','Bug','In Analysis','indeterminate','Promotion violation description - language issue','2025-10-31',199,'backlog',''],
+['TFSBE-1689','TFS BE','Defect','In Test','indeterminate','Release 2025.1 - incorrect fonts in all documents','2025-11-05',194,'backlog',''],
+['FLEDK-1006','FLEDK','Bug','In Design','indeterminate','Driver consents not auto-retrieved after edit','2025-11-06',193,'backlog','FLEDK W3S2'],
+['VWBE-7090','VW BE','H&AM','In verification','indeterminate','Provide release files to VWBE for installation','2025-11-06',193,'backlog',''],
+['TFSBE-1693','TFS BE','H&AM','Open','new','TFSBE - Deploy PRO 2025.1 PEPPOL on TFSBE_PRD','2025-11-06',193,'backlog',''],
+['ALDBE-4130','ALD BE','Defect','Ready for Analysis','new','Lease Price Deduct VAT equals Lease Price excl VAT','2025-11-07',192,'backlog',''],
+['TFSBE-1695','TFS BE','Story','Ready for Analysis','new','Wholesale balloon payment start date constraint','2025-11-07',192,'backlog',''],
+['TFSBE-1696','TFS BE','H&AM','Open','new','TFSBE_MIR - DB access for Kinto EU upgrade env','2025-11-07',192,'backlog',''],
+['PROD-41202','Product','Story','In Test','indeterminate','CRM outgoing connector - alternative contact identifier','2025-11-12',187,'sprint',''],
+['ALDBE-4132','ALD BE','Story','In Analysis','indeterminate','SOF_Shell_FuelInvoice_Import supplier discount management','2025-11-12',187,'sprint',''],
+['FLEDK-1026','FLEDK','Story','Open','new','eInvoicing - extend AdditionalItemProperties','2025-11-13',186,'sprint','FLEDK W2S1'],
+['FLEDK-1029','FLEDK','Bug','Open','new','Driver gets duplicate error messages','2025-11-14',185,'backlog','FLEDK W3S3'],
+['FLEDK-1031','FLEDK','Task','Ready for Analysis','new','PCR024 - Payer Verification','2025-11-17',182,'backlog','FLEDK W3S3'],
+['BMWNL-12026','BMW NL','Story','In Test','indeterminate','Adjustment Allianz export connector','2025-11-19',180,'sprint',''],
+['FLEDK-1048','FLEDK','Story','Ready for Test','new','D&R-0039 Service Addendum','2025-11-19',180,'backlog','FLEDK W3S2'],
+['VANBE-1938','VAN BE','Story','Awaiting Approval','new','[ACC] Sum Direct Debit and Direct Credit specifications','2025-11-20',179,'backlog',''],
+['BMWBE-5512','BMW BE','Bug','In Review','indeterminate','Vulnerable jdom library in miles-bmw-quote-calculation','2025-11-24',175,'backlog',''],
+['VANBE-1956','VAN BE','Bug','Ready for Analysis','new','[APAR] No reconciliation AP/AR vs GL balances','2025-11-25',174,'backlog',''],
+['FLEDK-1079','FLEDK','Bug','Ready for Design','new','Quote unit account (cost center) not visible to back office','2025-11-27',172,'backlog','FLEDK W3S3'],
+['TFSBE-1722','TFS BE','Defect','In Test','indeterminate','TFSBE MIR Upgrade - Jasper documents not updating','2025-12-01',168,'backlog',''],
+['PROD-40764','Product','Story','In Review','indeterminate','Contact refactoring for customer package ALDBE','2025-12-02',167,'sprint',''],
+['FLEDK-1114','FLEDK','Bug','Ready for Design','new','Missing Danish translation on vehicle config restriction','2025-12-10',159,'backlog','FLEDK W3S2'],
+['FLEDK-1127','FLEDK','Bug','Ready for Design','new','Driver cannot retrieve order and approved quotes','2025-12-12',157,'backlog','FLEDK W3S3'],
+['ALDBE-4143','ALD BE','Defect','Draft','new','Worklist tasks completed unintentionally','2025-12-15',154,'backlog',''],
+['ALDBE-4144','ALD BE','Story','In Analysis','indeterminate','UBClaims Import - license plate reuse issue','2025-12-16',153,'sprint',''],
+['BMWBE-5536','BMW BE','Bug','In Progress','indeterminate','Wholesale contract - unallowed quotation template change','2025-12-17',152,'sprint',''],
+['ALD-809','ALD Gen','Task','In Test','indeterminate','Activate account for Loic Feitz','2025-12-17',152,'backlog',''],
+['ALDBE-4149','ALD BE','Task','Ready for Analysis','new','Rebill with calculated amount','2026-01-06',132,'backlog',''],
+['BMWBE-5548','BMW BE','Story','Draft','new','Analysis & Architecture BMW Dolphin','2026-01-09',129,'backlog',''],
+['TFSBE-1772','TFS BE','Task','In Test','indeterminate','Wrong Servicedesk access for Islem Zemzemi','2026-01-13',125,'backlog',''],
+['ALDBE-4159','ALD BE','Story','Open','new','Atradius Exposure and Credit Limit','2026-01-26',112,'sprint',''],
+['BMWNL-12052','BMW NL','Story','In Analysis','indeterminate','Miles WEB Quotes - optimize Show expired quotes','2026-01-27',111,'sprint',''],
+['BMWBE-5570','BMW BE','Task','In Test','indeterminate','HVR with Database Encryption (TDE)','2026-01-27',111,'backlog',''],
+['TFSBE-1797','TFS BE','Defect','In Analysis','indeterminate','PRD data privacy - signed contract from customer A to B','2026-01-30',108,'backlog',''],
+['FLEDK-1241','FLEDK','Story','In Test','indeterminate','D&R-0041 Settlement','2026-01-30',108,'backlog','FLEDK KUVT 3'],
+['BMWBE-5574','BMW BE','Task','Ready for Analysis','new','PEPPOL - no active bank account rejection','2026-02-09',98,'backlog',''],
+['ALDBE-4180','ALD BE','Bug','In Analysis','indeterminate','PaymentDocument reference no longer displayed','2026-02-09',98,'backlog',''],
+['ALDBE-4181','ALD BE','Story','Ready for Analysis','new','CR535 - Add second signer for Atradius','2026-02-10',97,'backlog',''],
+['FLEDK-1273','FLEDK','Story','Open','new','Customization of eDocs signing completion web page','2026-02-10',97,'backlog','FLEDK W3S3'],
+['BMWBE-5576','BMW BE','Defect','Ready for Analysis','new','MMP BE - Missing ODS data after Event Connector failure','2026-02-10',97,'backlog',''],
+['FLEDK-1284','FLEDK','Bug','Ready for Test','new','PCR016 - driver still sees catalog option prices','2026-02-12',95,'backlog','FLEDK W3S3'],
+['TFSBE-1835','TFS BE','Bug','Ready for Analysis','new','Peppol - rolled-back invoices not exported','2026-02-12',95,'backlog',''],
+['VWBE-7139','VW BE','Story','Ready for Analysis','new','MWS calculator replacement to API - Olivia','2026-02-13',94,'backlog',''],
+['BMWBE-5578','BMW BE','Defect','In Analysis','indeterminate','MMP - Data Persistence and Recovery','2026-02-13',94,'backlog',''],
+['VWBE-7140','VW BE','Defect','Ready for Analysis','new','Accounting issue in UP XML (FUSD-4236)','2026-02-13',94,'backlog',''],
+['TFSBE-1830','TFS BE','Bug','Open','new','Miles: new version - credit application fails','2026-02-11',96,'sprint',''],
+['ALDNORDICS-206','ALD Nordics','Task','Ready for Analysis','new','Carglass connector modification','2026-02-11',96,'sprint',''],
+['BMWNL-12067','BMW NL','Defect','Ready for Analysis','new','NL PROD - Events are no longer sent','2026-02-20',87,'backlog',''],
+['FLEDK-1301','FLEDK','Bug','Ready for Design','new','PCR016 - Discounts not shown for miles-contract-v2','2026-02-20',87,'backlog','FLEDK W3S3'],
+['ALDBE-4195','ALD BE','Story','In Test','indeterminate','Extended_UnifiedPost_Export wrong VAT amount','2026-02-17',90,'sprint',''],
+['TFSBE-1844','TFS BE','H&AM','Open','new','UPGR_TFSBE - MMP Flavor 1.10.0 deployment','2026-02-17',90,'backlog',''],
+['VWBE-7157','VW BE','Epic','In Progress','indeterminate','Generic Cost Import interface enhancement - delivery ticket','2026-02-27',80,'backlog',''],
+['VWBE-7161','VW BE','Defect','Ready for Analysis','new','ORD comments not always present in Miles (KAPA/SME)','2026-03-02',77,'sprint',''],
+['FLEDK-1330','FLEDK','Story','Ready for Design','new','EOC_CORE Take-In Fees - ad hoc/manual creation','2026-03-02',77,'backlog','FLEDK W3S2'],
+['FLEDK-1337','FLEDK','Bug','In Analysis','indeterminate','PCR016 - fleet mgr sees restricted remaining options','2026-03-02',77,'backlog','FLEDK W3S3'],
+['FLEDK-1341','FLEDK','Task','In Analysis','indeterminate','Driver cannot see Add accessory button when quoting','2026-03-03',76,'sprint','FLEDK W3S3'],
+['FLEDK-1339','FLEDK','Bug','Ready for Design','new','Driver sees Accessories section when empty','2026-03-03',76,'backlog','FLEDK W3S3'],
+['FLEDK-1340','FLEDK','Bug','Ready for Design','new','Fleet Mgr cannot see generic accessories on quoting','2026-03-03',76,'backlog','FLEDK W3S3'],
+['PROD-42002','Product','Bug','Draft','new','Peppol - rolled-back invoices not exported','2026-03-04',75,'sprint',''],
+['VANBE-2083','VAN BE','Task','In Progress','indeterminate','[Front-end] Jordy joins Front-end taskforce','2026-03-04',75,'backlog',''],
+['VWBE-7172','VW BE','Story','Ready for Analysis','new','BE_Renta_REI_eInvoice_Import connector - phase out BMF','2026-03-05',74,'backlog',''],
+['ALD-818','ALD Gen','Epic','Open','new','MWS to MMP transition project','2026-03-06',73,'backlog',''],
+['ALD-815','ALD Gen','Task','Open','new','GMP POC: Administrative tasks','2026-03-06',73,'backlog',''],
+['ALD-816','ALD Gen','Task','Draft','new','GMP POC: Workshops','2026-03-06',73,'backlog',''],
+['ALD-820','ALD Gen','Task','Draft','new','MWS to MMP transition project: Meetings','2026-03-06',73,'backlog',''],
+['VWBE-7178','VW BE','Bug','Open','new','Not allowed to fill in insurance information globally','2026-03-09',70,'sprint',''],
+['ALDBE-4206','ALD BE','Story','In Progress','indeterminate','ChangeDistanceAndDuration Import - impossible twice a day','2026-03-11',68,'sprint',''],
+['BMWBE-5600','BMW BE','Task','Ready for Analysis','new','Wholesale contract outstanding capital','2026-03-11',68,'backlog',''],
+['BMWBE-5604','BMW BE','Defect','In Analysis','indeterminate','R2025.1 - inactive sessions not closed (JBoss)','2026-03-13',66,'backlog',''],
+['ALD-831','ALD Gen','Task','Draft','new','API call spotchecks & technical feasibility docs','2026-03-19',60,'sprint',''],
+['FLEDK-1407','FLEDK','Story','Ready for Design','new','Fleet Assistant functionality in BCL','2026-03-26',53,'backlog','FLEDK W3S3'],
+['VWBE-7203','VW BE','Defect','In Test','indeterminate','Error generating documents - follow-up SDVWBE-1289','2026-03-26',53,'backlog',''],
+['VWBE-7201','VW BE','Bug','In Analysis','indeterminate','Commission numbers not transferred from Olivia','2026-03-25',54,'backlog',''],
+['ALDBE-4223','ALD BE','Defect','Ready for Analysis','new','Error with CreateNewMWSCustomer webservice','2026-03-25',54,'backlog',''],
+['VWBE-7202','VW BE','Defect','In Analysis','indeterminate','Upload pter - franchise MD not correct','2026-03-25',54,'backlog',''],
+['FLEDK-1442','FLEDK','Bug','Ready for Design','new','Fleet Assistant - retrieval via web portal','2026-04-02',46,'backlog','FLEDK W3S3'],
+['BMWNL-12112','BMW NL','H&AM','Resolved','done','HVR - Remove tables no longer needed (done)','2026-04-01',47,'sprint',''],
+['BMWBE-5616','BMW BE','Defect','In Analysis','indeterminate','UBClaims Invoice Import - complete rollback on single failure','2026-04-14',34,'backlog',''],
+['ALD-834','ALD Gen','H&AM','Open','new','MILES INFRA - migration to RHEL9','2026-04-15',33,'backlog',''],
+['ALDBE-4236','ALD BE','Task','In Analysis','indeterminate','Actual p.a. and Deviation values - missing details','2026-04-15',33,'backlog',''],
+['FLEDK-1470','FLEDK','Story','In Analysis','indeterminate','Authentication via prod MitID (eDoc)','2026-04-15',33,'backlog','FLEDK W3S3'],
+['FLEDK-1472','FLEDK','Story','Ready for Design','new','Scrive messages in own language (eDoc)','2026-04-16',32,'backlog','FLEDK W3S3'],
+['VANBE-2158','VAN BE','Story','Ready for Analysis','new','Integration CrediBill','2026-04-16',32,'sprint',''],
+['FLEDK-1480','FLEDK','Bug','Draft','new','Fleet Mgr cannot select last generic accessory document','2026-04-21',27,'backlog','FLEDK W3S3'],
+['ALDBE-4241','ALD BE','Bug','Open','new','BusinessPartner ConfigurableFields Import errors','2026-04-22',26,'backlog',''],
+['VWBE-7237','VW BE','Bug','Open','new','Amend Amount not calculating on credit limit amendment','2026-04-23',25,'backlog',''],
+['BMWBE-5627','BMW BE','Task','In Progress','indeterminate','New DFE Portal Demo & Deep Dive','2026-04-24',24,'backlog',''],
+['BMWNL-12123','BMW NL','H&AM','Open','new','Publish flavor connected to 20260126_2wk','2026-04-27',21,'backlog',''],
+['BMWBE-5631','BMW BE','Defect','Open','new','BE INT - Events not sent for validated contracts','2026-04-28',20,'backlog',''],
+['ALDBE-4243','ALD BE','H&AM','In verification','indeterminate','Login for quay.io - container image pulling','2026-04-28',20,'backlog',''],
+['FLEDK-1493','FLEDK','Bug','Ready for Design','new','Unable to send eDoc for amendment quote on TST','2026-04-28',20,'backlog','FLEDK W3S3'],
+['VWBE-7243','VW BE','H&AM','In verification','indeterminate','Sofico to publish new EP 7.93','2026-04-28',20,'backlog',''],
+['ALDBE-4249','ALD BE','Defect','Ready for Analysis','new','Extended_UnifiedPost_Export - incorrect XML tag name','2026-04-28',20,'backlog',''],
+['BMWBE-5636','BMW BE','Defect','Ready for Analysis','new','Update application flow does not work as expected','2026-04-28',20,'backlog',''],
+['VWBE-7242','VW BE','Defect','In Analysis','indeterminate','PCR co-debtor E1-E2 - missing mandatory data fields','2026-04-27',21,'sprint',''],
+['VWBE-7246','VW BE','Defect','Ready for Analysis','new','BE PROD - JasperReport pod restarts','2026-04-29',19,'backlog',''],
+['VWBE-7248','VW BE','Defect','Ready for Analysis','new','BE PROD - lack of disk space on PVC','2026-04-29',19,'backlog',''],
+['FLEDK-1553','FLEDK','Story','Ready for Design','new','Fleet/Driver - news feed messages','2026-04-29',19,'backlog','FLEDK W3S3'],
+['VWBE-7258','VW BE','Defect','In Analysis','indeterminate','Issue with IDs already existing in CONS','2026-04-29',19,'backlog',''],
+['FLEDK-1501','FLEDK','Bug','Ready for Analysis','new','PEPPOL: Scheme ID missing for OIOUBL sub-type','2026-04-29',19,'sprint',''],
+['FLEDK-1502','FLEDK','Bug','Ready for Analysis','new','PEPPOL: Zero-VAT line items incorrectly mapped to Tax Category S','2026-04-29',19,'sprint',''],
+['VWBE-7259','VW BE','Defect','Ready for Analysis','new','Error opening user group / account page (MMC CFG)','2026-04-30',18,'backlog',''],
+['FLEDK-1495','FLEDK','Story','Ready for Design','new','Document header in own color (back office user)','2026-04-30',18,'backlog','FLEDK W3S3'],
+['BMWNL-12136','BMW NL','Bug','Ready for Analysis','new','Pentest: Bypassing 2FA','2026-04-30',18,'backlog',''],
+['BMWNL-12124','BMW NL','Story','Ready for Test','new','Miles Web - additional screen','2026-04-28',20,'sprint',''],
+['FLEDK-1507','FLEDK','Story','In Progress','indeterminate','Fleet portal: new Danish locale-specific translations','2026-04-30',18,'sprint','FLEDK W3S3'],
+['FLEDK-1508','FLEDK','Story','In Progress','indeterminate','Driver portal: new Danish locale-specific translations','2026-04-30',18,'sprint','FLEDK W3S3'],
+['FLEDK-1552','FLEDK','Bug','Ready for Design','new','crm-outgoing-connector not starting on FLEDK_ACC','2026-05-06',12,'backlog','FLEDK W3S3'],
+['BMWNL-12137','BMW NL','H&AM','Waiting for analysis','new','HVR NL - new license required','2026-05-06',12,'backlog',''],
+['BMWNL-12138','BMW NL','Defect','Ready for Analysis','new','Miles NL - no M2M authentication for SA3 webservice','2026-05-06',12,'backlog',''],
+['ALDBE-4244','ALD BE','Task','In Progress','indeterminate','Not able to link TPSC to succeeding contract','2026-05-06',12,'backlog',''],
+['BMWNL-12130','BMW NL','Story','Ready for Analysis','new','[MMP NL & BE] Error Process Improvements','2026-05-04',14,'sprint',''],
+['FLEDK-1532','FLEDK','Story','Open','new','Bill upfront changes in case of contract modification','2026-05-12',6,'sprint','FLEDK W3S3'],
+['KBC-14893','KBC','Bug','Ready for Design','new','Visibility type order on fleet vehicle and LTC','2026-05-12',6,'sprint',''],
+['KBC-14895','KBC','Release Note','Open','new','Visibility type order - release note','2026-05-12',6,'sprint',''],
+['BMWBE-5638','BMW BE','Release Note','Resolved','done','Credit app overview - old vehicles (done)','2026-05-13',5,'sprint',''],
+['FLEDK-1550','FLEDK','Release Note','Resolved','done','Fleet portal: Danish locale translations (done)','2026-05-13',5,'sprint','FLEDK W3S3'],
+['FLEDK-1551','FLEDK','Release Note','Resolved','done','Driver portal: Danish locale translations (done)','2026-05-13',5,'sprint','FLEDK W3S3'],
+['PROD-41210','Product','Release Note','Resolved','done','CRM outgoing connector - release note (done)','2025-11-12',187,'sprint',''],
+['PROD-42634','Product','Test Issue','Resolved','done','Fleet manager event - internal server error (done)','2026-05-07',11,'sprint',''],
+['BMWNL-12135','BMW NL','Sub-task','Resolved','done','Script request - Allianz export connector (done)','2026-05-11',7,'sprint',''],
+['FLEDK-1520','FLEDK','Sub-task','Resolved','done','Script request - VDR foreign currency (done)','2026-05-07',11,'sprint','FLEDK W3S3'],
+['TFSBE-1868','TFS BE','Bug','Draft','new','E-invoicing Peppol: Outgoing invoice not exported','2026-02-24',83,'backlog',''],
+['TFSBE-1870','TFS BE','Task','Ready for Analysis','new','Peppol - TFSBE_PRD - SFTP issue','2026-02-25',82,'backlog',''],
+['VANBE-2076','VAN BE','H&AM','Draft','new','PVC critically low','2026-02-26',81,'backlog',''],
+['FLEDK-1326','FLEDK','Config','In Test','indeterminate','Dealer Portals: Optimizing customer matching on import','2026-02-27',80,'backlog',''],
+['TFSBE-1833','TFS BE','Defect','Ready for Analysis','new','2WP Sanity Check: Template Filter Field issue','2026-02-12',95,'backlog',''],
+['VWBE-7135','VW BE','Task','In Test','indeterminate','EP2 creation for VWBE - 2wk release','2026-02-12',95,'backlog',''],
+['VWBE-7133','VW BE','Story','Ready for Analysis','new','Modify Miles to SAP export by increasing level of detail','2026-02-12',95,'backlog',''],
+['BMWNL-12062','BMW NL','H&AM','In verification','indeterminate','Quay Image of 20260209_2wk','2026-02-11',96,'backlog',''],
+['FLEDK-1280','FLEDK','Story','Ready for Design','new','Different prices in the Fleet Manager Portal','2026-02-11',96,'backlog','FLEDK W3S3'],
+['TFSBE-1841','TFS BE','Task','Ready for Analysis','new','E-invoice: XML upload in MW + RIA (Stipulation)','2026-02-16',91,'backlog',''],
+['VWBE-7142','VW BE','H&AM','In Test','indeterminate','Heartbeats not functioning Mir VWBE','2026-02-16',91,'backlog',''],
+['VWBE-7127','VW BE','H&AM','In Test','indeterminate','New flavor version for VWBE','2026-02-09',98,'backlog',''],
+['VWBE-7128','VW BE','Task','Open','new','Inquiry on AMLD6 & EU AML Regulation Directive','2026-02-09',98,'backlog',''],
+['FLEDK-1276','FLEDK','Story','In Analysis','indeterminate','PCR038 - JATO Import Finetuning','2026-02-10',97,'backlog','FLEDK KUVT 3'],
+['FLEDK-1277','FLEDK','Bug','Open','new','FM - vehicle pricing section shown during quote opening','2026-02-10',97,'backlog','FLEDK W2S2'],
+['TFSBE-1837','TFS BE','Defect','Ready for Analysis','new','VO system error on CANCEL transaction - TW-3425','2026-02-13',94,'backlog',''],
+['VWBE-7136','VW BE','Epic','Draft','new','Upgrade MMP framework to v5 - VWBE services','2026-02-13',94,'backlog',''],
+['VWBE-7121','VW BE','Task','In Test','indeterminate','Make document APIs available','2026-01-30',108,'backlog',''],
+['VWBE-7123','VW BE','Task','In Test','indeterminate','Duplicate checks on Customer and Supplier Business Partner','2026-02-02',105,'backlog',''],
+['VANBE-2070','VAN BE','H&AM','In Progress','indeterminate','productconfig.xml needs restart to take effect on mmp','2026-02-18',89,'backlog',''],
+['ALDNORDICS-207','ALD Nordics','H&AM','Draft','new','Sweden - Rundeck script failure/timeout','2026-02-19',88,'backlog',''],
+['FLEDK-1302','FLEDK','H&AM','In Progress','indeterminate','FLEDK_TST: GenerateInvoice - database lock','2026-02-20',87,'backlog',''],
+['TFSBE-1864','TFS BE','Bug','Open','new','Revert hotfix for Primefaces','2026-02-20',87,'backlog',''],
+['VWBE-7153','VW BE','Task','Draft','new','Create CR document for VWBE','2026-02-23',84,'backlog',''],
+['VANBE-2073','VAN BE','H&AM','In Analysis','indeterminate','VANBE_PRD - Disk DB (F:) is full','2026-02-23',84,'backlog',''],
+['FLEDK-1303','FLEDK','Task','In Test','indeterminate','D&R-0022 Vehicle Sale Pro Forma Invoice','2026-02-23',84,'backlog','FLEDK W3S2'],
+['VWBE-7147','VW BE','H&AM','Draft','new','Migrate MIR_VWBE after cutover','2026-02-20',87,'backlog',''],
+['FLEDK-1300','FLEDK','Story','Ready for Analysis','new','TPCSM - allow streaming of additional TPSCs','2026-02-20',87,'backlog','FLEDK KUVT 3'],
+['FLEDK-1338','FLEDK','Task','In Progress','indeterminate','Portals - JOBE Timelogging Support','2026-03-03',76,'backlog','FLEDK KUVT 3'],
+['FLEDK-1331','FLEDK','Task','In Progress','indeterminate','Portal Translations - Internal Follow-up Ticket','2026-03-02',77,'backlog','FLEDK KUVT 3'],
+['VWBE-7219','VW BE','Story','Open','new','Tires MRT clause number bulk correction','2026-04-09',39,'backlog',''],
+['BMWNL-12118','BMW NL','Task','Draft','new','IDA web changes - roll-back','2026-04-09',39,'backlog',''],
+['TFSBE-1824','TFS BE','H&AM','Draft','new','Enhance rundeck jobs with notifications on mastfsbeppod02','2026-02-06',101,'backlog',''],
+['VANBE-2060','VAN BE','H&AM','Draft','new','Enhance rundeck jobs on azvanbeppod01 (VANBE_PRD)','2026-02-06',101,'backlog',''],
+['ALDBE-4251','ALD BE','Sub-task','Resolved','done','Test sub-task','2026-05-18',0,'sprint','']];
+
+const CUSTS=[...new Set(D.map(r=>r[1]))].sort();
+const s=document.getElementById('fcust');
+CUSTS.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);});
+
+function band(a){return a<30?'f':a<91?'w':a<181?'h':'c';}
+function bCls(a){return{f:'af',w:'aw',h:'ah',c:'ac'}[band(a)];}
+const TC={Bug:'t-bug',Defect:'t-def',Story:'t-sto',Task:'t-tsk',Config:'t-oth',Epic:'t-oth','H&AM':'t-ham','H&amp;AM':'t-ham','Release Note':'t-ham','Sub-task':'t-oth','Test Issue':'t-oth'};
+function typeCls(t){return TC[t]||'t-oth';}
+function sdot(sc){return`<span class="sdot ${{new:'s-todo',indeterminate:'s-wip',done:'s-done'}[sc]||'s-todo'}"></span>`;}
+
+let sf='age',sd=1;
+const BASE='https://sofico.atlassian.net/browse/';
+
+function filtered(){
+  const q=(document.getElementById('fsearch').value||'').toLowerCase();
+  const fpl=document.getElementById('fpool').value;
+  const fba=document.getElementById('fband').value;
+  const fcu=document.getElementById('fcust').value;
+  const fst=document.getElementById('fstat').value;
+  const fty=document.getElementById('ftype').value;
+  return D.filter(r=>{
+    if(fpl!=='all'&&r[8]!==fpl) return false;
+    if(fba!=='all'&&band(r[7])!==fba) return false;
+    if(fcu!=='all'&&r[1]!==fcu) return false;
+    if(fst!=='all'&&r[4]!==fst) return false;
+    if(fty!=='all'){
+      const tp=r[2]==='Hosting & Application Management'?'H&AM':r[2];
+      if(fty!==tp&&fty!==r[2]) return false;
+    }
+    if(q&&!r[0].toLowerCase().includes(q)&&!r[5].toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function sort(f){
+  if(sf===f) sd*=-1; else{sf=f;sd=1;}
+  ['age','key','cust','type','status','created'].forEach(n=>{
+    const el=document.getElementById('s'+n[0]);
+    if(el) el.textContent='↕';
+  });
+  const m={age:'sa',key:'sk',cust:'sc2',type:'st2',status:'sst',created:'scr'};
+  if(m[f]){
+    document.getElementById(m[f]).textContent=sd>0?'↓':'↑';
+    document.querySelector(`th[onclick="sort('${f}')"]`).classList.add('sorted');
+  }
+  render();
+}
+
+function render(){
+  const rows=filtered();
+  const fi={age:7,key:0,cust:1,type:2,status:3,created:6}[sf]??7;
+  rows.sort((a,b)=>{let av=a[fi],bv=b[fi];if(av<bv)return-sd;if(av>bv)return sd;return 0;});
+
+  const bands={f:0,w:0,h:0,c:0};
+  rows.forEach(r=>bands[band(r[7])]++);
+  const tot=rows.length||1;
+
+  document.getElementById('m-total').textContent=rows.length;
+  document.getElementById('m-crit').textContent=bands.c;
+  document.getElementById('m-hot').textContent=bands.h;
+  document.getElementById('m-warm').textContent=bands.w;
+  document.getElementById('m-fresh').textContent=bands.f;
+  document.getElementById('cnt').innerHTML=`<span>${rows.length}</span> of ${D.length} issues`;
+
+  const segs=document.getElementById('abar').children;
+  const pct=b=>Math.round(bands[b]*100/tot)+'%';
+  segs[0].style.width=pct('f');
+  segs[1].style.width=pct('w');
+  segs[2].style.width=pct('h');
+  segs[3].style.width=pct('c');
+
+  const nr=document.getElementById('no-results');
+  const tb=document.getElementById('tb');
+  if(!rows.length){tb.innerHTML='';nr.style.display='block';return;}
+  nr.style.display='none';
+
+  tb.innerHTML=rows.map(r=>{
+    const tp=r[2]==='Hosting & Application Management'?'H&AM':r[2];
+    const fv=r[9]?`<span class="fv-tag">${r[9]}</span>`:'';
+    const pool=r[8]==='sprint'?'<span class="pl-s">sprint</span>':'<span class="pl-b">backlog</span>';
+    return `<tr>
+<td><span class="ab ${bCls(r[7])}">${r[7]}d</span></td>
+<td><a class="kl" href="${BASE}${r[0]}" target="_blank" rel="noopener">${r[0]}</a></td>
+<td style="color:var(--muted)">${r[1]}</td>
+<td><span class="tb ${typeCls(r[2])}">${tp}</span></td>
+<td>${sdot(r[4])}<span style="color:var(--muted)">${r[3]}</span></td>
+<td>${r[5]}${fv}</td>
+<td style="color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px">${r[6]}</td>
+<td>${pool}</td>
+</tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('th').forEach(th=>th.classList.remove('sorted'));
+document.getElementById('sa').textContent='↓';
+document.querySelector("th[onclick=\"sort('age')\"]").classList.add('sorted');
+render();
+</script>
+</body>
+</html>
