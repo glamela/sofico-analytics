@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cluster 3 — Issue Flow Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface-alt: #f0ede8;
+    --border: rgba(0,0,0,0.09);
+    --border-strong: rgba(0,0,0,0.16);
+    --text-primary: #1a1917;
+    --text-secondary: #6b6860;
+    --text-tertiary: #9e9b94;
+    --amber: #EF9F27;
+    --amber-light: #FEF3DC;
+    --amber-dark: #BA7517;
+    --teal: #1D9E75;
+    --teal-light: #E1F5EE;
+    --teal-dark: #0F6E56;
+    --red-light: #FCEBEB;
+    --red-dark: #A32D2D;
+    --green-light: #EAF3DE;
+    --green-dark: #3B6D11;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+  }
+
+  body {
+    font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 14px; }
+
+  .header-badge {
+    background: #1a1917;
+    color: #f5f4f0;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  header h1 {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .header-meta {
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 57px);
+  }
+
+  aside {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    position: sticky;
+    top: 57px;
+    height: calc(100vh - 57px);
+    overflow-y: auto;
+  }
+
+  .sidebar-section { margin-bottom: 24px; }
+
+  .sidebar-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 10px;
+  }
+
+  .filter-group-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 10px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    margin-bottom: 6px;
+    transition: all 0.15s;
+  }
+  .filter-group-btn:hover { background: var(--surface-alt); border-color: var(--border-strong); }
+  .filter-group-btn.active { background: #1a1917; color: #f5f4f0; border-color: #1a1917; }
+
+  .filter-group-clients { margin-top: 6px; }
+
+  .client-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.12s;
+    user-select: none;
+  }
+  .client-item:hover { background: var(--surface-alt); }
+  .client-item.active { color: var(--text-primary); font-weight: 500; }
+
+  .client-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--border-strong);
+    transition: background 0.15s;
+  }
+  .client-item.active .client-dot { background: var(--teal); }
+
+  .type-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    margin: 3px 3px 3px 0;
+    background: var(--surface);
+    color: var(--text-secondary);
+    transition: all 0.12s;
+  }
+  .type-pill:hover { border-color: var(--border-strong); color: var(--text-primary); }
+  .type-pill.active { background: #1a1917; color: #f5f4f0; border-color: #1a1917; }
+
+  .sidebar-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .btn-small {
+    flex: 1;
+    padding: 5px 0;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .btn-small:hover { background: var(--surface-alt); color: var(--text-primary); }
+
+  main {
+    padding: 28px 32px;
+    overflow-y: auto;
+  }
+
+  .warning-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--amber-light);
+    border-left: 3px solid var(--amber);
+    padding: 10px 14px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: 12px;
+    color: #7a5010;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .warning-bar strong { font-weight: 500; }
+
+  .cards-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+  }
+  .stat-card-label {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .stat-card-value {
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+  .stat-card-sub {
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+  }
+
+  .chart-card-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .chart-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .chart-subtitle {
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+
+  .legend-row {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+  }
+  .legend-row span { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .data-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table td.num {
+    text-align: right;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  .data-table tbody tr:hover { background: var(--surface-alt); }
+
+  .net-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+  }
+  .net-pos { background: var(--green-light); color: var(--green-dark); }
+  .net-neg { background: var(--red-light); color: var(--red-dark); }
+  .net-neu { background: var(--surface-alt); color: var(--text-tertiary); }
+
+  .sparkbar {
+    display: inline-block;
+    height: 4px;
+    border-radius: 2px;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  @media (max-width: 900px) {
+    .main-layout { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    .two-col { grid-template-columns: 1fr; }
+    .cards-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span class="header-badge">Cluster 3</span>
+    <h1>Issue Flow Dashboard</h1>
+  </div>
+  <div class="header-meta">Dec 2025 – May 2026 &nbsp;·&nbsp; Unit BE, Sofico</div>
+</header>
+
+<div class="main-layout">
+
+  <aside>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Client groups</div>
+      <button class="filter-group-btn active" data-group="bmw" onclick="toggleGroup('bmw',this)">
+        <span>BMW group</span><span>2</span>
+      </button>
+      <button class="filter-group-btn active" data-group="ayvens" onclick="toggleGroup('ayvens',this)">
+        <span>Ayvens group</span><span>9</span>
+      </button>
+      <button class="filter-group-btn active" data-group="toyota" onclick="toggleGroup('toyota',this)">
+        <span>Toyota &amp; Vancia</span><span>2</span>
+      </button>
+      <button class="filter-group-btn active" data-group="vw" onclick="toggleGroup('vw',this)">
+        <span>VW group</span><span>2</span>
+      </button>
+      <button class="filter-group-btn active" data-group="fledk" onclick="toggleGroup('fledk',this)">
+        <span>Fleggaard DK</span><span>1</span>
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Clients</div>
+      <div id="client-list"></div>
+      <div class="sidebar-actions">
+        <button class="btn-small" onclick="setAllClients(true)">All</button>
+        <button class="btn-small" onclick="setAllClients(false)">None</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Issue types</div>
+      <div id="type-list"></div>
+      <div class="sidebar-actions">
+        <button class="btn-small" onclick="setAllTypes(true)">All</button>
+        <button class="btn-small" onclick="setAllTypes(false)">None</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="warning-bar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span><strong>Data note:</strong> Inflow counts are minimum estimates — the Jira API capped results at 100 issues per monthly query. Actual inflow is higher. Outflow was collected per-project and is more complete. Net flow interpretation is limited by this asymmetry.</span>
+    </div>
+
+    <div class="cards-row" id="cards-row"></div>
+
+    <div class="charts-grid">
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-title">Inflow vs outflow — by month</div>
+            <div class="chart-subtitle">Is the pipeline stable?</div>
+          </div>
+          <div class="legend-row" style="margin-bottom:0;">
+            <span><span class="legend-dot" style="background:var(--amber);"></span>Inflow (min est.)</span>
+            <span><span class="legend-dot" style="background:var(--teal);"></span>Outflow</span>
+          </div>
+        </div>
+        <div style="position:relative;height:230px;">
+          <canvas id="monthly-chart" role="img" aria-label="Grouped bar chart showing inflow and outflow per month from December 2025 to May 2026">Monthly inflow and outflow data for Cluster 3.</canvas>
+        </div>
+      </div>
+
+      <div class="two-col">
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div>
+              <div class="chart-title">By client</div>
+              <div class="chart-subtitle">6-month totals</div>
+            </div>
+          </div>
+          <div id="client-table-wrap"></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div>
+              <div class="chart-title">By issue type</div>
+              <div class="chart-subtitle">Outflow breakdown</div>
+            </div>
+            <div class="legend-row" style="margin-bottom:0;">
+              <span><span class="legend-dot" style="background:var(--amber);"></span>In</span>
+              <span><span class="legend-dot" style="background:var(--teal);"></span>Out</span>
+            </div>
+          </div>
+          <div style="position:relative;width:100%;" id="type-chart-wrap">
+            <canvas id="type-chart" role="img" aria-label="Horizontal bar chart of inflow and outflow by issue type">Issue type breakdown.</canvas>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+const RAW = {"inflow":{"2025-12":{"VANBE":{"Defect":8,"Task":6,"Hosting & Application Management":1,"Epic":1,"Bug":3,"Release Note":1},"BMWBE":{"Release Note":6,"Defect":2,"Epic":1,"Task":2,"Bug":4,"Sub-task":1},"FLEDK":{"Sub-task":9,"Release Note":8,"Task":5,"Hosting & Application Management":2,"Test Issue":1,"Bug":8,"Defect":1,"Story":1},"VWBE":{"Defect":2,"Task":1,"Bug":1},"TFSBE":{"Defect":9,"Release Note":1,"Task":6,"Hosting & Application Management":1,"Epic":1},"ALDSEE":{"Task":1},"BMWNL":{"Task":1,"Story":1,"Defect":1,"Release Note":1},"VWIT":{"Task":1,"Bug":1}},"2026-01":{"VWBE":{"Task":6,"Bug":1},"VANBE":{"Task":14,"Bug":1,"Defect":4,"Hosting & Application Management":8,"Release Note":2},"FLEDK":{"Sub-task":4,"Bug":8,"Release Note":5,"Task":5,"Configuration":2,"Story":2,"Hosting & Application Management":2},"TFSBE":{"Bug":3,"Task":6,"Hosting & Application Management":4},"BMWNL":{"Task":5,"Defect":1},"VWIT":{"Task":1,"Bug":1},"BMWBE":{"Hosting & Application Management":1,"Story":2,"Task":5,"Release Note":1,"Bug":1},"ALDPAM":{"Hosting & Application Management":1},"ALDIT":{"Defect":2},"ALDNORDICS":{"Hosting & Application Management":1},"ALDLATAM":{"Epic":1}},"2026-02":{"TFSBE":{"Hosting & Application Management":11,"Release Note":6,"Sub-task":12,"Task":2},"FLEDK":{"Hosting & Application Management":11,"Bug":4,"Defect":1,"Story":4,"Test Issue":3,"Release Note":6,"Support":1,"Configuration":1},"VANBE":{"Hosting & Application Management":8,"Task":3,"Release Note":1},"VWBE":{"Task":5,"Sub-task":1,"Story":1,"Hosting & Application Management":1},"BMWNL":{"Task":1,"Release Note":1,"Story":1,"Test Issue":1,"Defect":1},"BMWBE":{"Bug":2,"Defect":2,"Hosting & Application Management":1,"Task":1},"ALDNORDICS":{"Bug":1,"Defect":1},"ALDIT":{"Task":1},"VWIT":{"Task":4}},"2026-03":{"FLEDK":{"Story":5,"Task":6,"Configuration":3,"Hosting & Application Management":9,"Release Note":1,"Bug":9,"Support":1,"Sub-task":1},"VWBE":{"Task":4,"Defect":2,"Hosting & Application Management":7,"Sub-task":6,"Story":1,"Bug":2},"VWIT":{"Task":5,"Hosting & Application Management":4,"Defect":1},"VANBE":{"Bug":1,"Hosting & Application Management":4,"Story":1,"Task":2},"BMWNL":{"Defect":2,"Story":1,"Bug":2,"Release Note":2},"TFSBE":{"Task":1,"Story":1,"Hosting & Application Management":6,"Defect":2},"BMWBE":{"Task":1,"Story":1,"Defect":1,"Bug":1},"ALDNORDICS":{"Hosting & Application Management":1},"ALDIT":{"Hosting & Application Management":2},"ALDNL":{"Hosting & Application Management":1}},"2026-04":{"VANBE":{"Defect":1,"Task":5,"Story":3,"Hosting & Application Management":8,"Sub-task":2,"Release Note":2,"Epic":1},"FLEDK":{"Story":2,"Bug":5,"Task":3,"Release Note":7,"Configuration":4,"Hosting & Application Management":7,"Test Issue":2},"BMWNL":{"Hosting & Application Management":1,"Bug":1,"Task":2,"Release Note":2,"Defect":1,"Sub-task":1},"TFSBE":{"Hosting & Application Management":6,"Release Note":1,"Defect":1},"VWBE":{"Sub-task":1,"Release Note":2,"Task":2,"Defect":3,"Hosting & Application Management":2,"Story":2,"Epic":1,"Test Issue":4,"Bug":1},"BMWBE":{"Defect":3,"Sub-task":1,"Release Note":1,"Bug":1},"VWIT":{"Hosting & Application Management":1,"Task":2,"Sub-task":2,"Defect":2,"Release Note":1}},"2026-05":{"FLEDK":{"Hosting & Application Management":12,"Sub-task":3,"Task":1,"Story":2,"Release Note":3,"Test Issue":1,"Support":4,"Configuration":4,"Bug":4,"Epic":1,"Workstream":5},"VWBE":{"Test Issue":1,"Task":5,"Hosting & Application Management":2,"Defect":3},"BMWNL":{"Bug":2,"Release Note":2,"Story":2,"Hosting & Application Management":3,"Defect":2,"Sub-task":1},"VANBE":{"Hosting & Application Management":5,"Defect":4,"Task":6,"Story":2},"BMWBE":{"Story":1,"Bug":1,"Hosting & Application Management":1,"Release Note":2},"TFSBE":{"Hosting & Application Management":6,"Release Note":1},"VWIT":{"Defect":2,"Story":1,"Hosting & Application Management":1},"ALDNL":{"Defect":1,"Task":1},"ALDNORDICS":{"Release Note":1},"ALDIT":{"Hosting & Application Management":1}}},"outflow":{"2025-12":{"VWIT":{"Task":2,"Hosting & Application Management":1,"Defect":1,"Activity":4},"VWBE":{"Defect":3,"Story":1,"Task":2,"Activity":4},"VANBE":{"Task":16,"Defect":17,"Release Note":1,"Bug":3,"Hosting & Application Management":4,"Activity":5,"Sub-task":7,"Story":2,"Epic":1},"TFSBE":{"Task":13,"Defect":13},"ALDIT":{"Defect":1},"ALDNL":{"Task":6},"ALDPAM":{"Defect":1},"ALDSEE":{"Defect":2,"Task":1},"BMWNL":{"Task":2,"Activity":8,"Defect":1,"Bug":2,"Release Note":1}},"2026-01":{"VWIT":{"Task":9,"Defect":2},"VWBE":{"Task":6,"Defect":1,"Story":1},"VANBE":{"Task":14,"Defect":5,"Hosting & Application Management":7,"Release Note":3,"Bug":2,"Story":2},"TFSBE":{"Task":11,"Hosting & Application Management":7,"Release Note":2,"Defect":6,"Bug":1},"FLEDK":{"Hosting & Application Management":3,"Release Note":5,"Sub-task":6,"Task":3,"Bug":4},"ALDIT":{"Activity":3,"Defect":2,"Hosting & Application Management":1},"ALDNL":{"Epic":1,"Task":4},"ALDNORDICS":{"Task":2,"Activity":2},"ALDPAM":{"Activity":1},"ALDSEE":{"Activity":1,"Task":1},"BMWNL":{"Task":5,"Bug":1,"Release Note":2,"Story":2,"Sub-task":1}},"2026-02":{"VWIT":{"Defect":3,"Hosting & Application Management":2},"VWBE":{"Defect":4,"Sub-task":3,"Hosting & Application Management":2,"Release Note":1,"Task":2,"Story":1},"VANBE":{"Task":12,"Defect":3,"Hosting & Application Management":23,"Release Note":1,"Bug":1},"TFSBE":{"Hosting & Application Management":31,"Task":4,"Release Note":7},"ALDIT":{"Bug":1,"Task":2,"Defect":1},"ALDNL":{"Hosting & Application Management":1},"ALDNORDICS":{"Hosting & Application Management":2,"Bug":1,"Release Note":1,"Defect":1},"BMWNL":{"Bug":1,"Release Note":3,"Test Issue":1,"Story":2,"Defect":1,"Task":4,"Epic":1}},"2026-03":{"VWIT":{"Task":11,"Hosting & Application Management":3,"Bug":2,"Story":2,"Defect":1},"VWBE":{"Sub-task":5,"Hosting & Application Management":10,"Release Note":7,"Task":10,"Defect":7,"Bug":3,"Story":1},"VANBE":{"Sub-task":6,"Release Note":4,"Defect":5,"Task":7,"Bug":3,"Hosting & Application Management":13},"ALDIT":{"Defect":2,"Task":2,"Hosting & Application Management":1},"ALDNL":{"Task":1,"Defect":1,"Hosting & Application Management":1},"ALDNORDICS":{"Hosting & Application Management":3,"Task":1},"BMWNL":{"Release Note":8,"Bug":5,"Defect":8,"Sub-task":2,"Epic":1,"Story":1}},"2026-04":{"VWIT":{"Release Note":3,"Defect":4,"Sub-task":2,"Hosting & Application Management":2,"Bug":2},"VWBE":{"Test Issue":7,"Defect":8,"Bug":5,"Epic":2,"Release Note":7,"Sub-task":1,"Story":3,"Hosting & Application Management":6,"Task":9},"VANBE":{"Release Note":4,"Test Issue":9,"Task":6,"Hosting & Application Management":11,"Sub-task":5,"Story":2,"Defect":1,"Bug":1},"ALDIT":{"Defect":1,"Hosting & Application Management":1},"ALDNL":{"Defect":1,"Bug":1,"Hosting & Application Management":2},"BMWBE":{"Release Note":3,"Epic":1,"Hosting & Application Management":4,"Defect":3,"Bug":3,"Sub-task":1,"Test Issue":1,"Task":8},"BMWNL":{"Task":8,"Hosting & Application Management":3,"Bug":5,"Release Note":2,"Defect":1,"Sub-task":1},"FLEDK":{"Story":10,"Bug":10,"Hosting & Application Management":11,"Defect":1,"Release Note":15,"Configuration":11,"Support":1,"Epic":1,"Test Issue":2,"Task":2,"Sub-task":1}},"2026-05":{"VWIT":{"Defect":5,"Task":2,"Story":1},"VWBE":{"Sub-task":1,"Hosting & Application Management":4,"Task":3,"Test Issue":1,"Release Note":2,"Defect":5,"Story":1,"Bug":1},"VANBE":{"Task":21,"Hosting & Application Management":12,"Defect":6,"Story":3,"Epic":1,"Bug":1},"TFSBE":{"Release Note":1,"Hosting & Application Management":10,"Defect":4,"Story":1,"Bug":1,"Task":7,"Epic":1},"FLEDK":{"Hosting & Application Management":13,"Release Note":7,"Configuration":4,"Bug":3,"Story":1,"Task":1,"Sub-task":8,"Epic":1,"Defect":2},"ALDIT":{"Task":1},"ALDNL":{"Defect":2},"ALDNORDICS":{"Bug":1,"Release Note":1},"BMWBE":{"Story":1,"Epic":1,"Task":2,"Bug":3,"Hosting & Application Management":2,"Release Note":2,"Defect":3},"BMWNL":{"Task":4,"Hosting & Application Management":4,"Bug":3,"Sub-task":1,"Defect":3,"Release Note":2}}}};
+
+const PNAMES = {BMWBE:'BMW FS Belgium',BMWNL:'BMW FS Netherlands',VWBE:"VW D'Ieteren Finance",VWIT:'VW IT',ALDIT:'Ayvens Italy',ALDNL:'Ayvens Netherlands',ALDPAM:'Ayvens PAM',ALDLATAM:'Ayvens LATAM',ALDNORDICS:'Ayvens Nordics',ALDSEE:'Ayvens SEE',ALDPT:'Ayvens Portugal',ALDTR:'Ayvens Turkey',ALDMY:'Ayvens Malaysia',TFSBE:'Toyota FS Belgium',VANBE:'Vancia Car Lease',FLEDK:'Fleggaard DK'};
+
+const GROUPS = {
+  bmw: ['BMWBE','BMWNL'],
+  ayvens: ['ALDIT','ALDNL','ALDPAM','ALDLATAM','ALDNORDICS','ALDSEE','ALDPT','ALDTR','ALDMY'],
+  toyota: ['TFSBE','VANBE'],
+  vw: ['VWBE','VWIT'],
+  fledk: ['FLEDK']
+};
+
+const MONTHS = ['2025-12','2026-01','2026-02','2026-03','2026-04','2026-05'];
+const MLABELS = ['Dec 25','Jan 26','Feb 26','Mar 26','Apr 26','May 26'];
+
+const allProjects = [...new Set([...Object.values(RAW.inflow).flatMap(m=>Object.keys(m)),...Object.values(RAW.outflow).flatMap(m=>Object.keys(m))])].sort();
+const allTypes = [...new Set([...Object.values(RAW.inflow).flatMap(m=>Object.values(m).flatMap(p=>Object.keys(p))),...Object.values(RAW.outflow).flatMap(m=>Object.values(m).flatMap(p=>Object.keys(p)))])].sort();
+
+const selClients = new Set(allProjects);
+const selTypes = new Set(allTypes);
+
+function buildClientList() {
+  const el = document.getElementById('client-list');
+  el.innerHTML = '';
+  allProjects.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'client-item' + (selClients.has(p) ? ' active' : '');
+    div.dataset.proj = p;
+    div.innerHTML = `<span class="client-dot"></span><span>${PNAMES[p]||p}</span>`;
+    div.onclick = () => { toggleClient(p); };
+    el.appendChild(div);
+  });
+}
+
+function buildTypeList() {
+  const el = document.getElementById('type-list');
+  el.innerHTML = '';
+  allTypes.forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'type-pill' + (selTypes.has(t) ? ' active' : '');
+    span.dataset.type = t;
+    span.textContent = t;
+    span.onclick = () => { toggleType(t); };
+    el.appendChild(span);
+  });
+}
+
+function toggleClient(p) {
+  if (selClients.has(p)) selClients.delete(p); else selClients.add(p);
+  document.querySelectorAll('.client-item').forEach(el => {
+    el.classList.toggle('active', selClients.has(el.dataset.proj));
+  });
+  syncGroupButtons();
+  update();
+}
+
+function toggleType(t) {
+  if (selTypes.has(t)) selTypes.delete(t); else selTypes.add(t);
+  document.querySelectorAll('.type-pill').forEach(el => {
+    el.classList.toggle('active', selTypes.has(el.dataset.type));
+  });
+  update();
+}
+
+function setAllClients(v) {
+  allProjects.forEach(p => v ? selClients.add(p) : selClients.delete(p));
+  document.querySelectorAll('.client-item').forEach(el => el.classList.toggle('active', v));
+  syncGroupButtons();
+  update();
+}
+
+function setAllTypes(v) {
+  allTypes.forEach(t => v ? selTypes.add(t) : selTypes.delete(t));
+  document.querySelectorAll('.type-pill').forEach(el => el.classList.toggle('active', v));
+  update();
+}
+
+function toggleGroup(group, btn) {
+  const projs = GROUPS[group] || [];
+  const allOn = projs.every(p => selClients.has(p));
+  projs.forEach(p => allOn ? selClients.delete(p) : selClients.add(p));
+  document.querySelectorAll('.client-item').forEach(el => {
+    el.classList.toggle('active', selClients.has(el.dataset.proj));
+  });
+  syncGroupButtons();
+  update();
+}
+
+function syncGroupButtons() {
+  document.querySelectorAll('.filter-group-btn').forEach(btn => {
+    const grp = btn.dataset.group;
+    const projs = GROUPS[grp] || [];
+    btn.classList.toggle('active', projs.some(p => selClients.has(p)));
+  });
+}
+
+function compute() {
+  const clients = [...selClients];
+  const types = [...selTypes];
+  const byMonth = MONTHS.map((m,i) => {
+    let inflow=0, outflow=0;
+    clients.forEach(p => types.forEach(t => {
+      inflow += RAW.inflow[m]?.[p]?.[t]||0;
+      outflow += RAW.outflow[m]?.[p]?.[t]||0;
+    }));
+    return {label:MLABELS[i], inflow, outflow};
+  });
+  const byClient = allProjects.filter(p=>selClients.has(p)).map(p => {
+    let inflow=0, outflow=0;
+    MONTHS.forEach(m => types.forEach(t => {
+      inflow += RAW.inflow[m]?.[p]?.[t]||0;
+      outflow += RAW.outflow[m]?.[p]?.[t]||0;
+    }));
+    return {proj:p, name:PNAMES[p]||p, inflow, outflow};
+  }).filter(c=>c.inflow+c.outflow>0).sort((a,b)=>(b.outflow+b.inflow)-(a.outflow+a.inflow));
+  const byType = allTypes.filter(t=>selTypes.has(t)).map(t => {
+    let inflow=0, outflow=0;
+    MONTHS.forEach(m => clients.forEach(p => {
+      inflow += RAW.inflow[m]?.[p]?.[t]||0;
+      outflow += RAW.outflow[m]?.[p]?.[t]||0;
+    }));
+    return {type:t, inflow, outflow};
+  }).filter(d=>d.inflow+d.outflow>0).sort((a,b)=>b.outflow-a.outflow);
+  return {byMonth, byClient, byType};
+}
+
+let mChart, tChart;
+
+function renderCards(d) {
+  const totalIn = d.byMonth.reduce((s,m)=>s+m.inflow,0);
+  const totalOut = d.byMonth.reduce((s,m)=>s+m.outflow,0);
+  const outs = d.byMonth.map(m=>m.outflow);
+  const maxOut = Math.max(...outs), minOut = Math.min(...outs);
+  const range = maxOut - minOut;
+  const stable = range <= 40;
+  const top = d.byClient[0];
+  document.getElementById('cards-row').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card-label">Inflow (min est.)</div>
+      <div class="stat-card-value" style="color:var(--amber-dark);">≥${totalIn}</div>
+      <div class="stat-card-sub">6-month total · capped at 100/mo</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Outflow</div>
+      <div class="stat-card-value" style="color:var(--teal-dark);">${totalOut}</div>
+      <div class="stat-card-sub">6-month total · more complete</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Outflow stability</div>
+      <div class="stat-card-value" style="font-size:18px;padding-top:4px;color:${stable?'var(--teal-dark)':'#993C1D'};">${stable?'Stable':'Volatile'}</div>
+      <div class="stat-card-sub">range: ${minOut}–${maxOut} per month</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Top outflow client</div>
+      <div class="stat-card-value" style="font-size:15px;padding-top:4px;">${top?top.name:'—'}</div>
+      <div class="stat-card-sub">${top?top.outflow+' issues resolved':''}</div>
+    </div>
+  `;
+}
+
+function renderMonthly(d) {
+  const ctx = document.getElementById('monthly-chart').getContext('2d');
+  if (mChart) mChart.destroy();
+  mChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.byMonth.map(m=>m.label),
+      datasets: [
+        {label:'Inflow (min est.)', data:d.byMonth.map(m=>m.inflow), backgroundColor:'#EF9F27', borderRadius:4, borderSkipped:false},
+        {label:'Outflow', data:d.byMonth.map(m=>m.outflow), backgroundColor:'#1D9E75', borderRadius:4, borderSkipped:false}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>c.dataset.label+': '+c.raw+(c.datasetIndex===0?' (min)':'')}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:12},color:'#9e9b94',autoSkip:false}},
+        y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11},color:'#9e9b94'}}
+      }
+    }
+  });
+}
+
+function renderClientTable(d) {
+  const rows = d.byClient.map(c => {
+    const net = c.outflow - c.inflow;
+    const cls = net > 5 ? 'net-pos' : net < -5 ? 'net-neg' : 'net-neu';
+    const maxV = Math.max(...d.byClient.map(x=>x.outflow));
+    const barW = maxV ? Math.round((c.outflow/maxV)*80) : 0;
+    return `<tr>
+      <td style="font-size:12px;">${c.name}</td>
+      <td class="num" style="color:var(--amber-dark);">≥${c.inflow}</td>
+      <td class="num" style="color:var(--teal-dark);">${c.outflow}<span class="sparkbar" style="width:${barW}px;background:var(--teal-light);"></span></td>
+      <td class="num"><span class="net-badge ${cls}">${net>=0?'+':''}${net}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('client-table-wrap').innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>Client</th>
+        <th style="text-align:right;">In</th>
+        <th style="text-align:right;">Out</th>
+        <th style="text-align:right;">Net</th>
+      </tr></thead>
+      <tbody>${rows||'<tr><td colspan="4" style="color:var(--text-tertiary);font-size:12px;text-align:center;padding:20px;">No data</td></tr>'}</tbody>
+    </table>`;
+}
+
+function renderTypeChart(d) {
+  const n = d.byType.length;
+  const h = Math.max(160, n * 36 + 50);
+  const wrap = document.getElementById('type-chart-wrap');
+  wrap.style.height = h + 'px';
+  const ctx = document.getElementById('type-chart').getContext('2d');
+  if (tChart) tChart.destroy();
+  tChart = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:d.byType.map(d=>d.type),
+      datasets:[
+        {label:'Inflow (min est.)', data:d.byType.map(d=>d.inflow), backgroundColor:'#EF9F27', borderRadius:3},
+        {label:'Outflow', data:d.byType.map(d=>d.outflow), backgroundColor:'#1D9E75', borderRadius:3}
+      ]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11},color:'#9e9b94'}},
+        y:{grid:{display:false},ticks:{font:{size:11},color:'#9e9b94',autoSkip:false}}
+      }
+    }
+  });
+}
+
+function update() {
+  const d = compute();
+  renderCards(d);
+  renderMonthly(d);
+  renderClientTable(d);
+  renderTypeChart(d);
+}
+
+buildClientList();
+buildTypeList();
+update();
+</script>
+</body>
+</html>
