@@ -1,0 +1,217 @@
+<h2 class="sr-only">MEO ticket flow dashboard: timing metrics for Blockers (4 tickets), Criticals (2 tickets), and Small tickets. Data as of 26 May 2026.</h2>
+
+<style>
+.panel{background:var(--color-background-primary);border:.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);margin-bottom:1.25rem;overflow:hidden}
+.ph{padding:12px 18px;border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ph-left{display:flex;align-items:center;gap:8px}
+.ph-title{font-size:15px;font-weight:500;color:var(--color-text-primary)}
+.ph-pill{font-size:11px;font-family:var(--font-mono);padding:2px 7px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-tertiary)}
+.ph-meta{font-size:12px;color:var(--color-text-tertiary)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;padding:12px 18px;border-bottom:.5px solid var(--color-border-tertiary)}
+.mc{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+.mc label{display:block;font-size:11px;color:var(--color-text-tertiary);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.mc-val{font-size:20px;font-weight:500;font-family:var(--font-mono);color:var(--color-text-primary)}
+.sec{padding:12px 18px}
+.sec+.sec{padding-top:0}
+.slabel{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.issue-row{display:grid;grid-template-columns:80px 1fr 110px 80px 76px;gap:0;border-bottom:.5px solid var(--color-border-tertiary);padding:7px 0;align-items:center}
+.issue-row:last-child{border-bottom:none}
+.issue-row a{font-family:var(--font-mono);font-size:12px;font-weight:500;text-decoration:none}
+.issue-row a:hover{text-decoration:underline}
+.issue-sum{font-size:13px;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 10px}
+.badge{font-size:11px;padding:2px 7px;border-radius:var(--border-radius-md)}
+.b-done{background:var(--color-background-success);color:var(--color-text-success)}
+.b-prog{background:var(--color-background-warning);color:var(--color-text-warning)}
+.b-todo{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.nr{text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--color-text-secondary)}
+.th-row{display:grid;grid-template-columns:80px 1fr 110px 80px 76px;gap:0;padding:0 0 6px;border-bottom:.5px solid var(--color-border-tertiary);margin-bottom:2px}
+.th-row span{font-size:11px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+.th-row span:nth-child(n+4){text-align:right}
+.th-row span:nth-child(3){padding-left:0}
+.notice{padding:12px 18px;font-size:13px;color:var(--color-text-secondary);display:flex;align-items:flex-start;gap:8px}
+</style>
+
+<div style="padding:.25rem 0 .5rem">
+  <p style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);margin:0 0 2px">MEO · Miles Enterprise Operations</p>
+  <p style="font-size:12px;color:var(--color-text-tertiary);margin:0">Snapshot · 26 May 2026 · Data from Jira changelog</p>
+</div>
+
+<div class="panel">
+  <div class="ph">
+    <div class="ph-left">
+      <span class="dot" style="background:#E24B4A"></span>
+      <span class="ph-title">Blockers</span>
+      <span class="ph-pill">priority = Blocker</span>
+    </div>
+    <span class="ph-meta">4 tickets &nbsp;·&nbsp; 2 open &nbsp;·&nbsp; 2 resolved</span>
+  </div>
+  <div class="sgrid">
+    <div class="mc"><label>Total</label><div class="mc-val" style="color:#E24B4A">4</div></div>
+    <div class="mc"><label>Open</label><div class="mc-val" style="color:var(--color-text-warning)">2</div></div>
+    <div class="mc"><label>Resolved</label><div class="mc-val" style="color:var(--color-text-success)">2</div></div>
+    <div class="mc"><label>Avg pickup</label><div class="mc-val">5.9h</div></div>
+    <div class="mc"><label>Avg flow time</label><div class="mc-val">42.3d</div></div>
+  </div>
+  <div class="sec">
+    <div class="slabel">Avg time per status (3 issues with full changelog)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px">
+      <span style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--color-text-secondary)"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A88;border:1px solid #E24B4A"></span>Open: 164h avg</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--color-text-secondary)"><span style="width:10px;height:10px;border-radius:2px;background:#B4B2A988;border:1px solid #888780"></span>In Test: 219h avg</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--color-text-secondary)"><span style="width:10px;height:10px;border-radius:2px;background:#AFA9EC88;border:1px solid #7F77DD"></span>In verification: 550h</span>
+      <span style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--color-text-secondary)"><span style="width:10px;height:10px;border-radius:2px;background:#9FE1CB88;border:1px solid #1D9E75"></span>In Progress: 38h</span>
+    </div>
+    <div style="position:relative;height:196px">
+      <canvas id="ch-blockers" role="img" aria-label="Average hours per status for Blocker tickets: Open 164h, In Test 219h, In verification 550h, In Progress 38h, Draft 6h, Waiting for customer 0.5h">Open: 164h, In Test: 219h, In verification: 550h, In Progress: 38h, Draft: 6h, Waiting for customer: 0.5h</canvas>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="slabel">Issues</div>
+    <div class="th-row">
+      <span>Key</span><span style="padding-left:10px">Summary</span><span style="padding-left:0">Status</span><span>Pickup</span><span>Flow</span>
+    </div>
+    <div class="issue-row">
+      <a href="https://sofico.atlassian.net/browse/MEO-325" style="color:#E24B4A" target="_blank">MEO-325</a>
+      <div class="issue-sum">Database import failing on deploy pipelines - blocking all deployments</div>
+      <div><span class="badge b-prog">In verification</span></div>
+      <div class="nr">17.5h</div>
+      <div class="nr">28.9d</div>
+    </div>
+    <div class="issue-row">
+      <a href="https://sofico.atlassian.net/browse/MEO-241" style="color:#E24B4A" target="_blank">MEO-241</a>
+      <div class="issue-sum">Many environments down - jppodman01 file not found: /local/zabbix.env</div>
+      <div><span class="badge b-done">Resolved</span></div>
+      <div class="nr">2m</div>
+      <div class="nr">5.2d</div>
+    </div>
+    <div class="issue-row">
+      <a href="https://sofico.atlassian.net/browse/MEO-216" style="color:#E24B4A" target="_blank">MEO-216</a>
+      <div class="issue-sum">TRAINING_MMP environment issues after refresh: Postgres pod stuck, streaming down</div>
+      <div><span class="badge b-done">Resolved</span></div>
+      <div class="nr">4m</div>
+      <div class="nr">30.0d</div>
+    </div>
+    <div class="issue-row">
+      <a href="https://sofico.atlassian.net/browse/MEO-10" style="color:#E24B4A" target="_blank">MEO-10</a>
+      <div class="issue-sum">We need a copy of the MS SQL Training database and environment set up in Europe</div>
+      <div><span class="badge b-prog">In Progress</span></div>
+      <div class="nr" style="color:var(--color-text-tertiary)">—</div>
+      <div class="nr">105d</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="ph">
+    <div class="ph-left">
+      <span class="dot" style="background:#BA7517"></span>
+      <span class="ph-title">Criticals</span>
+      <span class="ph-pill">priority = Critical</span>
+    </div>
+    <span class="ph-meta">2 tickets &nbsp;·&nbsp; 1 open &nbsp;·&nbsp; 1 resolved</span>
+  </div>
+  <div class="sgrid">
+    <div class="mc"><label>Total</label><div class="mc-val" style="color:#BA7517">2</div></div>
+    <div class="mc"><label>Open</label><div class="mc-val" style="color:var(--color-text-warning)">1</div></div>
+    <div class="mc"><label>Resolved</label><div class="mc-val" style="color:var(--color-text-success)">1</div></div>
+    <div class="mc"><label>Avg pickup</label><div class="mc-val" style="color:var(--color-text-danger)">26.4h</div></div>
+    <div class="mc"><label>Avg flow time</label><div class="mc-val">8.1d</div></div>
+  </div>
+  <div class="sec">
+    <div class="slabel">Avg time per status</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px">
+      <span style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--color-text-secondary)"><span style="width:10px;height:10px;border-radius:2px;background:#EF9F2788;border:1px solid #BA7517"></span>Draft: 194h avg — MEO-391 has never left Draft</span>
+    </div>
+    <div style="position:relative;height:76px">
+      <canvas id="ch-criticals" role="img" aria-label="Average hours per status for Critical tickets: Draft 194h average">Draft: 194h average (MEO-391 still in Draft at 362h, MEO-374 was in Draft for 26h before resolving)</canvas>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="slabel">Issues</div>
+    <div class="th-row">
+      <span>Key</span><span style="padding-left:10px">Summary</span><span>Status</span><span>Pickup</span><span>Flow</span>
+    </div>
+    <div class="issue-row">
+      <a href="https://sofico.atlassian.net/browse/MEO-391" style="color:#BA7517" target="_blank">MEO-391</a>
+      <div class="issue-sum">test_sofico_mcn is not upgraded correctly</div>
+      <div><span class="badge b-todo">Draft</span></div>
+      <div class="nr" style="color:var(--color-text-danger)">never moved</div>
+      <div class="nr">15.1d</div>
+    </div>
+    <div class="issue-row">
+      <a href="https://sofico.atlassian.net/browse/MEO-374" style="color:#BA7517" target="_blank">MEO-374</a>
+      <div class="issue-sum">masfcabepdb01 was down because oraclefra was full</div>
+      <div><span class="badge b-done">Resolved</span></div>
+      <div class="nr">26.4h</div>
+      <div class="nr">1.1d</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="ph">
+    <div class="ph-left">
+      <span class="dot" style="background:#378ADD"></span>
+      <span class="ph-title">Small</span>
+      <span class="ph-pill">story points / size estimate</span>
+    </div>
+  </div>
+  <div class="notice">
+    <i class="ti ti-info-circle" style="font-size:16px;color:var(--color-text-info);flex-shrink:0;margin-top:1px" aria-hidden="true"></i>
+    <span>No story points or time estimates are set on MEO tickets, so "small" can't be auto-detected. Tell me how your team defines small (e.g. a label, a tag, tickets resolved within 2 days, specific issue types) and I'll rerun this panel with the right filter. <button style="margin-left:6px" onclick="sendPrompt('For the MEO dashboard, define small tickets as: ')">Define small tickets ↗</button></span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const tick = isDark ? 'rgba(200,200,200,.6)' : 'rgba(80,80,80,.7)';
+const grid = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)';
+const fmt = v => {
+  if(v<1) return Math.round(v*60)+'m';
+  if(v<48) return v.toFixed(0)+'h';
+  return Math.round(v/24)+'d';
+};
+
+new Chart(document.getElementById('ch-blockers'),{
+  type:'bar',
+  data:{
+    labels:['Waiting for customer','In Progress','Draft','In Test','Open','In verification'],
+    datasets:[{
+      data:[0.5,38.3,5.9,219.0,164.2,550.2],
+      backgroundColor:['#E24B4A22','#E24B4A44','#E24B4A55','#E24B4A77','#E24B4A99','#E24B4A'],
+      borderColor:['#E24B4A','#E24B4A','#E24B4A','#E24B4A','#E24B4A','#E24B4A'],
+      borderWidth:1,borderRadius:3
+    }]
+  },
+  options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+    scales:{
+      x:{grid:{color:grid},ticks:{callback:v=>fmt(v),color:tick,font:{size:11}},border:{display:false}},
+      y:{grid:{display:false},ticks:{color:tick,font:{size:11}},border:{display:false}}
+    }
+  }
+});
+
+new Chart(document.getElementById('ch-criticals'),{
+  type:'bar',
+  data:{
+    labels:['Draft'],
+    datasets:[{
+      data:[194.2],
+      backgroundColor:['#EF9F2788'],
+      borderColor:['#BA7517'],
+      borderWidth:1,borderRadius:3
+    }]
+  },
+  options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.raw)}}},
+    scales:{
+      x:{grid:{color:grid},ticks:{callback:v=>fmt(v),color:tick,font:{size:11}},border:{display:false}},
+      y:{grid:{display:false},ticks:{color:tick,font:{size:11}},border:{display:false}}
+    }
+  }
+});
+</script>
